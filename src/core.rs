@@ -1,0 +1,89 @@
+use bevy::app::App;
+use bevy::prelude::*;
+
+pub struct CorePlugin {
+    pub width: usize,
+    pub height: usize,
+}
+
+impl Plugin for CorePlugin {
+    fn build(&self, app: &mut App) {
+        app.init_state::<AppState>()
+            .init_state::<StageState>()
+            .insert_resource(Map::new(self.width, self.height));
+    }
+}
+
+impl Default for CorePlugin {
+    fn default() -> Self {
+        Self{ width: 20, height: 20 }
+    }
+}
+
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum AppState {
+    #[default]
+    Idle,
+    Gen,
+    Sol,
+}
+
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum StageState {
+    #[default]
+    Running,
+    Finished,
+}
+
+// Coordinate of node in world
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct Position {
+    pub x: i32,
+    pub y: i32,
+}
+
+// 4-direction square map
+#[derive(Resource)]
+pub struct Map {
+    pub width: usize,
+    pub height: usize,
+    pub tiles: Vec<Vec<TileType>> // real size: 2*width+1, 2*height+1
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TileType {
+    Barrier,
+    Passable,
+    Start,
+    End,
+    Visited,
+    ShortestPath
+}
+
+impl Map {
+    pub fn new(width: usize, height: usize) -> Self {
+        let real_width = (width<<1) + 1;
+        let real_height = (height<<1) + 1;
+        let tiles = vec![vec![TileType::Barrier; real_width]; real_height];
+        Self {
+            width: real_width,
+            height: real_height,
+            tiles
+        }
+    }
+}
+
+// map: (x, y) -> entity
+#[derive(Resource)]
+pub struct MapView {
+    pub entities: Vec<Vec<Entity>>,
+}
+
+// would trigger on specific entity
+// only observer that listens this entity would execute
+#[derive(EntityEvent)]
+pub struct UpdateTile {
+    pub entity: Entity,
+    pub new_type: TileType,
+}
+

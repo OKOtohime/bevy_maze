@@ -10,6 +10,7 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
             .init_state::<StageState>()
+            .init_resource::<AlgorithmSelection>()
             .insert_resource(Map::new(self.width, self.height));
     }
 }
@@ -33,6 +34,28 @@ pub enum StageState {
     #[default]
     Running,
     Finished,
+}
+
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum GenAlgorithm {
+    #[default]
+    DFS,
+    Prim,
+    Kruskal,
+}
+
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SolAlgorithm {
+    #[default]
+    BFS,
+    Dijkstra,
+    AStar,
+}
+
+#[derive(Resource, Default, PartialEq, Eq, Debug)]
+pub struct AlgorithmSelection {
+    pub gen_algorithm: GenAlgorithm,
+    pub sol_algorithm: SolAlgorithm,
 }
 
 // Coordinate of node in world

@@ -1,4 +1,4 @@
-use crate::core::{AppState, Map, MapView, StageState, TileType, UpdateTile};
+use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, SolAlgorithm, StageState, TileType, UpdateTile};
 use bevy::app::App;
 use bevy::prelude::*;
 
@@ -6,13 +6,13 @@ pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (setup_camera, setup_ui_button))
+        app.add_systems(Startup, (setup_camera, setup_ui))
             .add_systems(PostStartup, setup_map_ui)
-            .add_systems(Update, button_interaction_system);
+            .add_systems(Update, (button_interaction_system, alg_select_system));
     }
 }
 
-const TILE_SIZE: f32 = 16.0;
+const TILE_SIZE: f32 = 12.0;
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2d::default());
@@ -21,7 +21,14 @@ fn setup_camera(mut commands: Commands) {
 #[derive(Component)]
 struct NextStageButton;
 
-fn setup_ui_button(mut commands: Commands) {
+#[derive(Component)]
+pub struct GenSelectBtn(pub GenAlgorithm);
+
+#[derive(Component)]
+pub struct SolSelectBtn(pub SolAlgorithm);
+
+fn setup_ui(mut commands: Commands) {
+    // stage button
     commands.spawn((
         Node {
             position_type: PositionType::Absolute,
@@ -50,13 +57,115 @@ fn setup_ui_button(mut commands: Commands) {
             )]
         )]
     ));
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            left: px(20.0),
+            top: px(20.0),
+            flex_direction: FlexDirection::Column,
+            row_gap: px(15.0),
+            ..default()
+        },
+    )).with_children(|parent| {
+        parent.spawn((
+            Text::new("Maze Generator"),
+            TextFont { font_size: 20.0, ..default() },
+            TextColor(Color::srgb(0.8, 0.8, 0.8)),
+        ));
+
+        spawn_alg_btn(parent, "DFS", GenSelectBtn(GenAlgorithm::DFS));
+        spawn_alg_btn(parent, "Prim", GenSelectBtn(GenAlgorithm::Prim));
+        spawn_alg_btn(parent, "Kruskal", GenSelectBtn(GenAlgorithm::Kruskal));
+
+        parent.spawn((
+            Node { margin: UiRect::top(px(20.0)), ..default() },
+            Text::new("Path Finder"),
+            TextFont { font_size: 20.0, ..default() },
+            TextColor(Color::srgb(0.8, 0.8, 0.8)),
+        ));
+
+        spawn_alg_btn(parent, "BFS", SolSelectBtn(SolAlgorithm::BFS));
+        spawn_alg_btn(parent, "Dijkstra", SolSelectBtn(SolAlgorithm::Dijkstra));
+        spawn_alg_btn(parent, "A* Search", SolSelectBtn(SolAlgorithm::AStar));
+    });
+}
+
+fn spawn_alg_btn(parent: &mut ChildSpawnerCommands, text: &str, marker: impl Component) {
+    parent.spawn((
+        marker,
+        Button,
+        Node {
+            width: px(180.0),
+            height: px(40.0),
+            border: UiRect::all(px(2.0)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        BorderColor::all(Color::BLACK),
+        BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
+    )).with_children(|btn| {
+        btn.spawn((
+            Text::new(text),
+            TextFont { font_size: 16.0, ..default() },
+            TextColor(Color::WHITE),
+        ));
+    });
+}
+
+fn alg_select_system(
+    mut selection: ResMut<AlgorithmSelection>,
+    app_state: Res<State<AppState>>,
+    stage_state: Res<State<StageState>>,
+    mut gen_btns: Query<(Ref<Interaction>, &GenSelectBtn, &mut BackgroundColor, &mut BorderColor), Without<SolSelectBtn>>,
+    mut sol_btns: Query<(Ref<Interaction>, &SolSelectBtn, &mut BackgroundColor, &mut BorderColor), Without<GenSelectBtn>>,
+) {
+    let is_idle = *app_state.get() == AppState::Idle;
+    let is_finished = *stage_state.get() == StageState::Finished;
+    let can_switch = is_idle || is_finished;
+
+    for (interaction, btn_type, mut bg, mut border) in &mut gen_btns {
+        let is_selected = selection.gen_algorithm == btn_type.0;
+        if can_switch && *interaction == Interaction::Pressed {
+            selection.gen_algorithm = btn_type.0;
+        }
+        update_radio_btn_color(*interaction, is_selected, can_switch, &mut bg, &mut border);
+    }
+
+    for (interaction, btn_type, mut bg, mut border) in &mut sol_btns {
+        let is_selected = selection.sol_algorithm == btn_type.0;
+        if can_switch && *interaction == Interaction::Pressed {
+            selection.sol_algorithm = btn_type.0;
+        }
+        update_radio_btn_color(*interaction, is_selected, can_switch, &mut bg, &mut border);
+    }
+}
+
+fn update_radio_btn_color(
+    interaction: Interaction,
+    is_selected: bool,
+    can_switch: bool,
+    bg: &mut BackgroundColor,
+    border: &mut BorderColor
+) {
+    if is_selected {
+        *bg = BackgroundColor(Color::srgb(0.2, 0.5, 0.8));
+        *border = BorderColor::all(Color::WHITE);
+    } else if can_switch {
+        match interaction {
+            Interaction::Hovered => *bg = BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
+            _ => *bg = BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+        }
+        *border = BorderColor::all(Color::BLACK);
+    } else {
+        *bg = BackgroundColor(Color::srgb(0.1, 0.1, 0.1));
+        *border = BorderColor::all(Color::BLACK);
+    }
 }
 
 fn setup_map_ui(
     mut commands: Commands,
     map: Res<Map>,
-    mut next_state: ResMut<NextState<AppState>>,
-    mut next_stage_button: ResMut<NextState<StageState>>,
 ){
     let mut map_view = MapView {
         entities: vec![vec![Entity::PLACEHOLDER; map.width]; map.height],

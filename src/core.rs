@@ -102,3 +102,5 @@ pub struct UpdateTile {
     pub new_type: TileType,
 }
 
+// To visualize the algorithm process, we have to run the algorithm step by step
+pub const TIMER_INTERVAL: u64 = 10;

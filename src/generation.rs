@@ -1,6 +1,8 @@
-use crate::core::{AppState, Map, MapView, Position, TileType, UpdateTile};
+use std::time::Duration;
+use crate::core::{AppState, Map, MapView, Position, TileType, UpdateTile, TIMER_INTERVAL};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
+use bevy::time::common_conditions::on_timer;
 use rand::prelude::IndexedRandom;
 
 pub struct MazeGenPlugin;
@@ -9,21 +11,19 @@ impl Plugin for MazeGenPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MazeGenState>()
             .add_systems(OnEnter(AppState::Gen), setup_maze_gen)
-            .add_systems(Update, generate_maze_step.run_if(in_state(AppState::Gen)));
+            .add_systems(Update, generate_maze_step.run_if(in_state(AppState::Gen).and(on_timer(Duration::from_millis(TIMER_INTERVAL)))));
     }
 }
 
 #[derive(Resource)]
 pub struct MazeGenState {
     pub stack: Vec<Position>,
-    pub timer: Timer,
 }
 
 impl Default for MazeGenState {
     fn default() -> Self {
         Self {
             stack: Vec::new(),
-            timer: Timer::from_seconds(0.001, TimerMode::Repeating),
         }
     }
 }
@@ -58,11 +58,7 @@ fn generate_maze_step(
     map_view: Res<MapView>,
     mut state: ResMut<MazeGenState>,
     mut next_state: ResMut<NextState<AppState>>,
-    time: Res<Time>,
 ) {
-    state.timer.tick(time.delta());
-    if !state.timer.just_finished() { return; }
-
     let mut rng = rand::rng();
     let directions = [(0, 2), (2, 0), (0, -2), (-2, 0)];
 

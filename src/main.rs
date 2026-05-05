@@ -8,10 +8,7 @@ use bevy::window::WindowMode;
 use crate::core::CorePlugin;
 use crate::generation::MazeGenPlugin;
 use crate::pathfinding::MazeSolPlugin;
-use crate::ui::UIPlugin;
-
-const DESKTOP_WIDTH: u32 = 1024;
-const DESKTOP_HEIGHT: u32 = 1024;
+use crate::ui::{UIPlugin, DESKTOP_HEIGHT, DESKTOP_WIDTH};
 
 fn main() {
     App::new()
@@ -26,7 +23,7 @@ fn main() {
                     ..default()
                 }), ..default()
             }),
-            CorePlugin{width: 20, height: 20},
+            CorePlugin{width: 35, height: 32},
             MazeGenPlugin,
             MazeSolPlugin,
             UIPlugin

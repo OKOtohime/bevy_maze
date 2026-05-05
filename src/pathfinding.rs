@@ -1,8 +1,7 @@
-use crate::core::{AppState, Map, MapView, Position, StageState, TileType, UpdateTile};
-use crate::generation::MazeGenState;
+use crate::core::{AppState, Map, MapView, Position, TileType, UpdateTile};
 use bevy::app::App;
 use bevy::platform::collections::HashMap;
-use bevy::prelude::{in_state, Commands, IntoScheduleConfigs, NextState, OnEnter, Plugin, Res, ResMut, Resource, SystemCondition, Time, Timer, TimerMode, Update};
+use bevy::prelude::*;
 use std::collections::VecDeque;
 
 pub struct MazeSolPlugin;
@@ -11,7 +10,7 @@ impl Plugin for MazeSolPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MazeSolState>()
             .add_systems(OnEnter(AppState::Sol), setup_maze_sol)
-            .add_systems(Update, solve_maze_step.run_if(in_state(AppState::Sol).and(in_state(StageState::Running))));
+            .add_systems(Update, solve_maze_step.run_if(in_state(AppState::Sol)));
     }
 }
 
@@ -34,11 +33,29 @@ impl Default for MazeSolState {
     }
 }
 
-fn setup_maze_sol(mut state: ResMut<MazeSolState>) {
+fn setup_maze_sol(
+    mut commands: Commands,
+    mut map: ResMut<Map>,
+    map_view: Res<MapView>,
+    mut state: ResMut<MazeSolState>
+) {
     state.queue.clear();
     state.came_from.clear();
     state.backtrack = None;
-    
+
+    for y in 0..map.height {
+        for x in 0..map.width {
+            let tile = map.tiles[y][x];
+            if tile == TileType::Visited || tile == TileType::ShortestPath {
+                map.tiles[y][x] = TileType::Passable;
+                commands.trigger(UpdateTile {
+                    entity: map_view.entities[y][x],
+                    new_type: TileType::Passable
+                });
+            }
+        }
+    }
+
     let start_pos = Position { x: 1, y: 1 };
     state.queue.push_back(start_pos);
     state.came_from.insert(start_pos, start_pos);
@@ -50,7 +67,7 @@ fn solve_maze_step(
     mut map: ResMut<Map>,
     map_view: Res<MapView>,
     mut state: ResMut<MazeSolState>,
-    mut next_stage_state: ResMut<NextState<StageState>>,
+    mut next_state: ResMut<NextState<AppState>>,
     time: Res<Time>,
 ) {
     state.timer.tick(time.delta());
@@ -61,7 +78,7 @@ fn solve_maze_step(
         if let Some(&parent) = state.came_from.get(&current_backtrack) {
             if parent == (Position{x:1, y:1}){
                 state.backtrack = None;
-                next_stage_state.set(StageState::Finished);
+                next_state.set(AppState::Idle);
                 return;
             }
             let entity = map_view.entities[parent.y as usize][parent.x as usize];
@@ -100,6 +117,6 @@ fn solve_maze_step(
             }
         }
     }else{
-        next_stage_state.set(StageState::Finished);
+        next_state.set(AppState::Idle);
     }
 }

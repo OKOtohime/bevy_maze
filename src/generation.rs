@@ -1,6 +1,6 @@
-use crate::core::{AppState, Map, MapView, Position, StageState, TileType, UpdateTile};
+use crate::core::{AppState, Map, MapView, Position, TileType, UpdateTile};
 use bevy::app::{App, Plugin};
-use bevy::prelude::{in_state, Commands, IntoScheduleConfigs, NextState, OnEnter, Res, ResMut, Resource, SystemCondition, Time, Timer, TimerMode, Update};
+use bevy::prelude::*;
 use rand::prelude::IndexedRandom;
 
 pub struct MazeGenPlugin;
@@ -9,7 +9,7 @@ impl Plugin for MazeGenPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MazeGenState>()
             .add_systems(OnEnter(AppState::Gen), setup_maze_gen)
-            .add_systems(Update, generate_maze_step.run_if(in_state(AppState::Gen).and(in_state(StageState::Running))));
+            .add_systems(Update, generate_maze_step.run_if(in_state(AppState::Gen)));
     }
 }
 
@@ -23,7 +23,7 @@ impl Default for MazeGenState {
     fn default() -> Self {
         Self {
             stack: Vec::new(),
-            timer: Timer::from_seconds(0.01, TimerMode::Repeating),
+            timer: Timer::from_seconds(0.001, TimerMode::Repeating),
         }
     }
 }
@@ -57,7 +57,7 @@ fn generate_maze_step(
     mut map: ResMut<Map>,
     map_view: Res<MapView>,
     mut state: ResMut<MazeGenState>,
-    mut next_stage_state: ResMut<NextState<StageState>>,
+    mut next_state: ResMut<NextState<AppState>>,
     time: Res<Time>,
 ) {
     state.timer.tick(time.delta());
@@ -90,7 +90,6 @@ fn generate_maze_step(
             map.tiles[wall_y][wall_x] = TileType::Passable;
             map.tiles[next_y][next_x] = TileType::Passable;
 
-            // 2. 触发 UI 更新 (Observer 会捕捉到这个 EntityEvent)
             commands.trigger(UpdateTile {
                 entity: map_view.entities[wall_y][wall_x],
                 new_type: TileType::Passable,
@@ -113,6 +112,6 @@ fn generate_maze_step(
             entity: map_view.entities[end_y][end_x],
             new_type: TileType::End,
         });
-        next_stage_state.set(StageState::Finished);
+        next_state.set(AppState::Idle);
     }
 }

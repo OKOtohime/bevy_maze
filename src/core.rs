@@ -9,7 +9,6 @@ pub struct CorePlugin {
 impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
-            .init_state::<StageState>()
             .init_resource::<AlgorithmSelection>()
             .insert_resource(Map::new(self.width, self.height));
     }
@@ -27,13 +26,6 @@ pub enum AppState {
     Idle,
     Gen,
     Sol,
-}
-
-#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum StageState {
-    #[default]
-    Running,
-    Finished,
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]

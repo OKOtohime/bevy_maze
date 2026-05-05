@@ -1,4 +1,4 @@
-use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, SolAlgorithm, StageState, TileType, UpdateTile};
+use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, SolAlgorithm, TileType, UpdateTile};
 use bevy::app::App;
 use bevy::prelude::*;
 
@@ -8,18 +8,22 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, (setup_camera, setup_ui))
             .add_systems(PostStartup, setup_map_ui)
-            .add_systems(Update, (button_interaction_system, alg_select_system));
+            .add_systems(Update, (control_button_system, alg_select_system));
     }
 }
 
-const TILE_SIZE: f32 = 12.0;
+pub const DESKTOP_WIDTH: u32 = 1280;
+pub const DESKTOP_HEIGHT: u32 = 1024;
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2d::default());
 }
 
 #[derive(Component)]
-struct NextStageButton;
+struct GenerateBtn;
+
+#[derive(Component)]
+struct SolveBtn;
 
 #[derive(Component)]
 pub struct GenSelectBtn(pub GenAlgorithm);
@@ -28,35 +32,6 @@ pub struct GenSelectBtn(pub GenAlgorithm);
 pub struct SolSelectBtn(pub SolAlgorithm);
 
 fn setup_ui(mut commands: Commands) {
-    // stage button
-    commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            bottom: px(20.0),
-            right: px(20.0),
-            ..default()
-        },
-        children![(
-            NextStageButton,
-            Button,
-            Node {
-                width: px(200.0),
-                height: px(80.0),
-                border: UiRect::all(px(3.0)),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                border_radius: BorderRadius::MAX,
-                ..default()
-            },
-            BorderColor::all(Color::BLACK),
-            BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
-            children![(
-                Text::new("Waiting..."),
-                TextFont { font_size: 28.0, ..default() },
-                TextColor(Color::WHITE),
-            )]
-        )]
-    ));
     commands.spawn((
         Node {
             position_type: PositionType::Absolute,
@@ -67,32 +42,34 @@ fn setup_ui(mut commands: Commands) {
             ..default()
         },
     )).with_children(|parent| {
-        parent.spawn((
-            Text::new("Maze Generator"),
-            TextFont { font_size: 20.0, ..default() },
-            TextColor(Color::srgb(0.8, 0.8, 0.8)),
-        ));
+        spawn_label(parent, "Maze generator");
+        spawn_btn_with_component(parent, "DFS", GenSelectBtn(GenAlgorithm::DFS));
+        spawn_btn_with_component(parent, "Prim", GenSelectBtn(GenAlgorithm::Prim));
+        spawn_btn_with_component(parent, "Kruskal", GenSelectBtn(GenAlgorithm::Kruskal));
 
-        spawn_alg_btn(parent, "DFS", GenSelectBtn(GenAlgorithm::DFS));
-        spawn_alg_btn(parent, "Prim", GenSelectBtn(GenAlgorithm::Prim));
-        spawn_alg_btn(parent, "Kruskal", GenSelectBtn(GenAlgorithm::Kruskal));
+        spawn_label(parent, "Path Finder");
+        spawn_btn_with_component(parent, "BFS", SolSelectBtn(SolAlgorithm::BFS));
+        spawn_btn_with_component(parent, "Dijkstra", SolSelectBtn(SolAlgorithm::Dijkstra));
+        spawn_btn_with_component(parent, "A* Search", SolSelectBtn(SolAlgorithm::AStar));
 
-        parent.spawn((
-            Node { margin: UiRect::top(px(20.0)), ..default() },
-            Text::new("Path Finder"),
-            TextFont { font_size: 20.0, ..default() },
-            TextColor(Color::srgb(0.8, 0.8, 0.8)),
-        ));
-
-        spawn_alg_btn(parent, "BFS", SolSelectBtn(SolAlgorithm::BFS));
-        spawn_alg_btn(parent, "Dijkstra", SolSelectBtn(SolAlgorithm::Dijkstra));
-        spawn_alg_btn(parent, "A* Search", SolSelectBtn(SolAlgorithm::AStar));
+        spawn_label(parent, "Control");
+        spawn_btn_with_component(parent, "Generate", GenerateBtn);
+        spawn_btn_with_component(parent, "Solve", SolveBtn);
     });
 }
 
-fn spawn_alg_btn(parent: &mut ChildSpawnerCommands, text: &str, marker: impl Component) {
+fn spawn_label(parent: &mut ChildSpawnerCommands, text: &str){
     parent.spawn((
-        marker,
+        Node { margin: UiRect::top(px(20.0)), ..default() },
+        Text::new(text),
+        TextFont { font_size: 20.0, ..default() },
+        TextColor(Color::srgb(0.8, 0.8, 0.8)),
+    ));
+}
+
+fn spawn_btn_with_component(parent: &mut ChildSpawnerCommands, text: &str, component: impl Component) {
+    parent.spawn((
+        component,
         Button,
         Node {
             width: px(180.0),
@@ -113,17 +90,45 @@ fn spawn_alg_btn(parent: &mut ChildSpawnerCommands, text: &str, marker: impl Com
     });
 }
 
+fn control_button_system(
+    app_state: Res<State<AppState>>,
+    mut next_app_state: ResMut<NextState<AppState>>,
+    mut gen_btn_query: Query<(Ref<Interaction>, &mut BackgroundColor, &mut BorderColor), (With<GenerateBtn>, Without<SolveBtn>)>,
+    mut sol_btn_query: Query<(Ref<Interaction>, &mut BackgroundColor, &mut BorderColor), (With<SolveBtn>, Without<GenerateBtn>)>,
+) {
+    let is_idle = *app_state.get() == AppState::Idle;
+    let mut handle_interaction = |interaction: Ref<Interaction>, bg: &mut BackgroundColor, border: &mut BorderColor, target_state: AppState| {
+        if is_idle {
+            match *interaction {
+                Interaction::Pressed => {
+                    *bg = BackgroundColor(Color::srgb(0.35, 0.75, 0.35));
+                    if interaction.is_changed() { next_app_state.set(target_state); }
+                }
+                Interaction::Hovered => {
+                    *bg = BackgroundColor(Color::srgb(0.3, 0.6, 0.3));
+                    *border = BorderColor::all(Color::WHITE);
+                }
+                Interaction::None => {
+                    *bg = BackgroundColor(Color::srgb(0.2, 0.5, 0.2));
+                    *border = BorderColor::all(Color::BLACK);
+                }
+            }
+        } else {
+            *bg = BackgroundColor(Color::srgb(0.2, 0.2, 0.2));
+            *border = BorderColor::all(Color::BLACK);
+        }
+    };
+    for (int, mut bg, mut border) in &mut gen_btn_query { handle_interaction(int, &mut bg, &mut border, AppState::Gen); }
+    for (int, mut bg, mut border) in &mut sol_btn_query { handle_interaction(int, &mut bg, &mut border, AppState::Sol); }
+}
+
 fn alg_select_system(
     mut selection: ResMut<AlgorithmSelection>,
     app_state: Res<State<AppState>>,
-    stage_state: Res<State<StageState>>,
     mut gen_btns: Query<(Ref<Interaction>, &GenSelectBtn, &mut BackgroundColor, &mut BorderColor), Without<SolSelectBtn>>,
     mut sol_btns: Query<(Ref<Interaction>, &SolSelectBtn, &mut BackgroundColor, &mut BorderColor), Without<GenSelectBtn>>,
 ) {
-    let is_idle = *app_state.get() == AppState::Idle;
-    let is_finished = *stage_state.get() == StageState::Finished;
-    let can_switch = is_idle || is_finished;
-
+    let can_switch = *app_state.get() == AppState::Idle;
     for (interaction, btn_type, mut bg, mut border) in &mut gen_btns {
         let is_selected = selection.gen_algorithm == btn_type.0;
         if can_switch && *interaction == Interaction::Pressed {
@@ -171,19 +176,35 @@ fn setup_map_ui(
         entities: vec![vec![Entity::PLACEHOLDER; map.width]; map.height],
     };
     let mut observer = Observer::new(on_update_tile);
+
+    let ui_pannel_width = 200.0;
+    let screen_padding = 40.0;
+
+    let usable_width = DESKTOP_WIDTH as f32 - ui_pannel_width - screen_padding;
+    let usable_height = DESKTOP_HEIGHT as f32 - screen_padding;
+
+    let tile_size = (usable_width / map.width as f32).min(usable_height / map.height as f32).floor();
+    let map_pixel_width = map.width as f32 * tile_size;
+    let map_pixel_height = map.height as f32 * tile_size;
+
+    let offset_x = -(DESKTOP_WIDTH as f32 / 2.0) + ui_pannel_width + (usable_width / 2.0);
+    let offset_y = 0.0;
+
     for y in 0..map.height {
         for x in 0..map.width {
             let tile_type = map.tiles[y][x];
             let color = get_color_for_tile(tile_type);
+            let base_x = (x as f32) * tile_size - (map_pixel_width / 2.0) + (tile_size / 2.0);
+            let base_y = (y as f32) * tile_size - (map_pixel_height / 2.0) + (tile_size / 2.0);
             let entity = commands.spawn((
                 Sprite {
                     color,
-                    custom_size: Some(Vec2::new(TILE_SIZE - 1.0, TILE_SIZE - 1.0)),
+                    custom_size: Some(Vec2::new((tile_size - 1.0).max(1.0), (tile_size - 1.0).max(1.0))),
                     ..default()
                 },
                 Transform::from_xyz(
-                    (x as f32) * TILE_SIZE - (map.width as f32 * TILE_SIZE / 2.0),
-                    (y as f32) * TILE_SIZE - (map.height as f32 * TILE_SIZE / 2.0),
+                    base_x + offset_x,
+                    base_y + offset_y,
                     0.0,
                 )
             )).id();
@@ -193,69 +214,6 @@ fn setup_map_ui(
     }
     commands.insert_resource(map_view);
     commands.spawn(observer);
-}
-
-fn button_interaction_system(
-    app_state: Res<State<AppState>>,
-    stage_state: Res<State<StageState>>,
-    mut next_app_state: ResMut<NextState<AppState>>,
-    mut next_stage_state: ResMut<NextState<StageState>>,
-    mut interaction_query: Query<
-        (Ref<Interaction>, &mut BackgroundColor, &mut BorderColor, &Children),
-        With<NextStageButton>,
-    >,
-    mut text_query: Query<&mut Text>,
-) {
-    for (interaction, mut bg_color, mut border_color, children) in &mut interaction_query {
-        let mut text = text_query.get_mut(children[0]).unwrap();
-        let is_idle = *app_state.get() == AppState::Idle;
-        let is_finished = *stage_state.get() == StageState::Finished;
-        let is_active = is_idle || is_finished;
-
-        let target_text = match app_state.get() {
-            AppState::Idle => "Generate maze",
-            AppState::Gen => if is_finished { "Solve" } else { "Generating..." },
-            AppState::Sol => if is_finished { "Restart" } else { "Solving..." },
-        };
-
-        if **text != target_text {
-            **text = target_text.to_string();
-        }
-
-        if is_active {
-            match *interaction {
-                Interaction::Pressed => {
-                    *bg_color = BackgroundColor(Color::srgb(0.35, 0.75, 0.35));
-                    if interaction.is_changed() {
-                        match app_state.get() {
-                            AppState::Idle => {
-                                next_app_state.set(AppState::Gen);
-                                next_stage_state.set(StageState::Running);
-                            }
-                            AppState::Gen => {
-                                next_app_state.set(AppState::Sol);
-                                next_stage_state.set(StageState::Running);
-                            }
-                            AppState::Sol => {
-                                next_app_state.set(AppState::Idle);
-                            }
-                        }
-                    }
-                }
-                Interaction::Hovered => {
-                    *bg_color = BackgroundColor(Color::srgb(0.3, 0.6, 0.3));
-                    *border_color = BorderColor::all(Color::WHITE);
-                }
-                Interaction::None => {
-                    *bg_color = BackgroundColor(Color::srgb(0.2, 0.5, 0.2));
-                    *border_color = BorderColor::all(Color::BLACK);
-                }
-            }
-        } else {
-            *bg_color = BackgroundColor(Color::srgb(0.2, 0.2, 0.2));
-            *border_color = BorderColor::all(Color::BLACK);
-        }
-    }
 }
 
 fn on_update_tile(

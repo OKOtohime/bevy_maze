@@ -1,4 +1,4 @@
-use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, SolAlgorithm, TileType, UpdateTile};
+use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, PaintTile, SolAlgorithm, TileType};
 use bevy::app::App;
 use bevy::prelude::*;
 
@@ -175,7 +175,7 @@ fn setup_map_ui(
     let mut map_view = MapView {
         entities: vec![vec![Entity::PLACEHOLDER; map.width]; map.height],
     };
-    let mut observer = Observer::new(on_update_tile);
+    let mut observer = Observer::new(on_paint_tile);
 
     let ui_pannel_width = 200.0;
     let screen_padding = 40.0;
@@ -216,22 +216,39 @@ fn setup_map_ui(
     commands.spawn(observer);
 }
 
-fn on_update_tile(
-    trigger: On<UpdateTile>,
+pub const COLOR_BARRIER: Color = Color::srgb(0.2, 0.2, 0.2);
+pub const COLOR_PASSIBLE: Color = Color::srgb(0.9, 0.9, 0.9);
+pub const COLOR_START: Color = Color::srgb(0.2, 0.8, 0.2);
+pub const COLOR_END: Color = Color::srgb(0.8, 0.2, 0.2);
+pub const COLOR_VISITED: Color = Color::srgb(0.4, 0.4, 0.4);
+pub const COLOR_PATH: Color = Color::srgb(0.8, 0.8, 0.2);
+
+fn on_paint_tile(
+    trigger: On<PaintTile>,
     mut sprites: Query<&mut Sprite>
 ) {
     if let Ok(mut sprite) = sprites.get_mut(trigger.entity) {
-        sprite.color = get_color_for_tile(trigger.new_type);
+        sprite.color = trigger.color;
     }
 }
 
-fn get_color_for_tile(tile_type: TileType) -> Color {
+pub fn get_color_for_tile(tile_type: TileType) -> Color {
     match tile_type {
-        TileType::Barrier => Color::srgb(0.2, 0.2, 0.2),
-        TileType::Passable => Color::srgb(0.9, 0.9, 0.9),
-        TileType::Start => Color::srgb(0.2, 0.8, 0.2),
-        TileType::End => Color::srgb(0.8, 0.2, 0.2),
-        TileType::Visited => Color::srgb(0.4, 0.4, 0.4),
-        TileType::ShortestPath => Color::srgb(0.8, 0.8, 0.2),
+        TileType::Barrier => COLOR_BARRIER,
+        TileType::Passable(cost) => {
+            if cost == 1 {
+                COLOR_PASSIBLE
+            }else{
+                let t = (cost as f32 - 2.0) / 8.0;
+                let r_start = 0.8; let g_start = 0.7; let b_start = 0.5;
+                let r_end = 0.3; let g_end = 0.15; let b_end = 0.05;
+                let r = r_start * (1.0 - t) + r_end * t;
+                let g = g_start * (1.0 - t) + g_end * t;
+                let b = b_start * (1.0 - t) + b_end * t;
+                Color::srgb(r, g, b)
+            }
+        },
+        TileType::Start => COLOR_START,
+        TileType::End => COLOR_END,
     }
 }

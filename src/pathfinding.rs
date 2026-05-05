@@ -1,11 +1,12 @@
 use std::cmp::Ordering;
-use crate::core::{AlgorithmSelection, AppState, Map, MapView, Position, SolAlgorithm, TileType, UpdateTile, TIMER_INTERVAL};
+use crate::core::{AlgorithmSelection, AppState, Map, MapView, Position, SolAlgorithm, TileType, PaintTile, TIMER_INTERVAL};
 use bevy::app::App;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use std::collections::{BinaryHeap, VecDeque};
 use std::time::Duration;
 use bevy::time::common_conditions::on_timer;
+use crate::ui::{get_color_for_tile, COLOR_PATH, COLOR_VISITED};
 
 pub struct MazeSolPlugin;
 
@@ -44,20 +45,17 @@ fn is_backtracking(tracker: Res<PathTracker>) -> bool {
 
 fn clear_previous_path(
     mut commands: Commands,
-    mut map: ResMut<Map>,
+    map: ResMut<Map>,
     map_view: Res<MapView>,
     mut tracker: ResMut<PathTracker>,
 ) {
     for y in 0..map.height {
         for x in 0..map.width {
             let tile = map.tiles[y][x];
-            if tile == TileType::Visited || tile == TileType::ShortestPath {
-                map.tiles[y][x] = TileType::Passable;
-                commands.trigger(UpdateTile {
-                    entity: map_view.entities[y][x],
-                    new_type: TileType::Passable
-                });
-            }
+            commands.trigger(PaintTile {
+                entity: map_view.entities[y][x],
+                color: get_color_for_tile(tile),
+            });
         }
     }
     tracker.came_from.clear();
@@ -89,7 +87,7 @@ fn setup_bfs(mut state: ResMut<BFSState>) {
 
 fn step_bfs(
     mut commands: Commands,
-    mut map: ResMut<Map>,
+    map: ResMut<Map>,
     map_view: Res<MapView>,
     mut state: ResMut<BFSState>,
     mut next_state: ResMut<NextState<AppState>>,
@@ -102,9 +100,8 @@ fn step_bfs(
             return;
         }
         let entity = map_view.entities[current.y as usize][current.x as usize];
-        if map.tiles[current.y as usize][current.x as usize] == TileType::Passable {
-            map.tiles[current.y as usize][current.x as usize] = TileType::Visited;
-            commands.trigger(UpdateTile{entity, new_type: TileType::Visited});
+        if matches!(map.tiles[current.y as usize][current.x as usize], TileType::Passable(_)) {
+            commands.trigger(PaintTile{entity, color: COLOR_VISITED});
         }
         let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
         for (dx, dy) in directions.iter() {
@@ -113,7 +110,7 @@ fn step_bfs(
             if nx > 0 && nx < (map.width - 1) as i32 && ny > 0 && ny < (map.height - 1) as i32 {
                 let next_pos = Position{x: nx, y: ny};
                 let target_tile = map.tiles[ny as usize][nx as usize];
-                if target_tile == TileType::Passable || target_tile == TileType::End {
+                if matches!(target_tile, TileType::Passable(_)) || target_tile == TileType::End {
                     if !tracker.came_from.contains_key(&next_pos) {
                         state.queue.push_back(Position { x: nx, y: ny });
                         tracker.came_from.insert(next_pos, current);
@@ -175,7 +172,7 @@ fn setup_astar(
 
 fn step_astar(
     mut commands: Commands,
-    mut map: ResMut<Map>,
+    map: ResMut<Map>,
     map_view: Res<MapView>,
     mut state: ResMut<AStarState>,
     mut next_state: ResMut<NextState<AppState>>,
@@ -199,9 +196,8 @@ fn step_astar(
         }
         let current_g = *state.g_score.get(&current).unwrap_or(&i32::MAX);
         let entity = map_view.entities[current.y as usize][current.x as usize];
-        if map.tiles[current.y as usize][current.x as usize] == TileType::Passable {
-            map.tiles[current.y as usize][current.x as usize] = TileType::Visited;
-            commands.trigger(UpdateTile{entity, new_type: TileType::Visited});
+        if matches!(map.tiles[current.y as usize][current.x as usize], TileType::Passable(_)) {
+            commands.trigger(PaintTile{entity, color: COLOR_VISITED});
         }
         let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
         for (dx, dy) in directions.iter() {
@@ -210,8 +206,13 @@ fn step_astar(
             if nx > 0 && nx < (map.width - 1) as i32 && ny > 0 && ny < (map.height - 1) as i32 {
                 let next_pos = Position{x: nx, y: ny};
                 let target_tile = map.tiles[ny as usize][nx as usize];
-                if target_tile == TileType::Passable || target_tile == TileType::End {
-                    let temp_g_score = current_g + 1;
+                if matches!(target_tile, TileType::Passable(_)) || target_tile == TileType::End {
+                    let step_cost = match target_tile {
+                        TileType::Passable(cost) => cost,
+                        TileType::End => 1,
+                        _ => unreachable!(),
+                    };
+                    let temp_g_score = current_g + step_cost;
                     let next_g_score = *state.g_score.get(&next_pos).unwrap_or(&i32::MAX);
                     if temp_g_score < next_g_score {
                         tracker.came_from.insert(next_pos, current);
@@ -256,7 +257,7 @@ fn setup_dijkstra(mut state: ResMut<DijkstraState>, ) {
 
 fn step_dijkstra(
     mut commands: Commands,
-    mut map: ResMut<Map>,
+    map: ResMut<Map>,
     map_view: Res<MapView>,
     mut state: ResMut<DijkstraState>,
     mut next_state: ResMut<NextState<AppState>>,
@@ -279,9 +280,8 @@ fn step_dijkstra(
         }
         let current_g = *state.g_score.get(&current).unwrap_or(&i32::MAX);
         let entity = map_view.entities[current.y as usize][current.x as usize];
-        if map.tiles[current.y as usize][current.x as usize] == TileType::Passable {
-            map.tiles[current.y as usize][current.x as usize] = TileType::Visited;
-            commands.trigger(UpdateTile{entity, new_type: TileType::Visited});
+        if matches!(map.tiles[current.y as usize][current.x as usize], TileType::Passable(_)) {
+            commands.trigger(PaintTile{entity, color: COLOR_VISITED});
         }
         let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
         for (dx, dy) in directions.iter() {
@@ -290,8 +290,13 @@ fn step_dijkstra(
             if nx > 0 && nx < (map.width - 1) as i32 && ny > 0 && ny < (map.height - 1) as i32 {
                 let next_pos = Position::new(nx, ny);
                 let target_tile = map.tiles[ny as usize][nx as usize];
-                if target_tile == TileType::Passable || target_tile == TileType::End {
-                    let temp_g_score = current_g + 1;
+                if matches!(target_tile, TileType::Passable(_)) || target_tile == TileType::End {
+                    let step_cost = match target_tile {
+                        TileType::Passable(cost) => cost,
+                        TileType::End => 1,
+                        _ => unreachable!(),
+                    };
+                    let temp_g_score = current_g + step_cost;
                     let next_g_score = *state.g_score.get(&next_pos).unwrap_or(&i32::MAX);
                     if temp_g_score < next_g_score {
                         tracker.came_from.insert(next_pos, current);
@@ -318,7 +323,6 @@ pub struct PathTracker {
 
 fn draw_shortest_path(
     mut commands: Commands,
-    mut map: ResMut<Map>,
     map_view: Res<MapView>,
     mut tracker: ResMut<PathTracker>,
     mut next_app_state: ResMut<NextState<AppState>>,
@@ -331,8 +335,7 @@ fn draw_shortest_path(
                 return;
             }
             let entity = map_view.entities[parent.y as usize][parent.x as usize];
-            map.tiles[parent.y as usize][parent.x as usize] = TileType::ShortestPath;
-            commands.trigger(UpdateTile { entity, new_type: TileType::ShortestPath });
+            commands.trigger(PaintTile { entity, color: COLOR_PATH });
             tracker.backtrack = Some(parent);
         }
     }

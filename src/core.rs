@@ -77,11 +77,17 @@ pub struct Map {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TileType {
     Barrier,
-    Passable,
+    Passable(i32), // cost
     Start,
-    End,
-    Visited,
-    ShortestPath
+    End
+}
+
+// would trigger on specific entity
+// only observer that listens this entity would execute
+#[derive(EntityEvent)]
+pub struct PaintTile {
+    pub entity: Entity,
+    pub color: Color
 }
 
 impl Map {
@@ -101,14 +107,6 @@ impl Map {
 #[derive(Resource)]
 pub struct MapView {
     pub entities: Vec<Vec<Entity>>,
-}
-
-// would trigger on specific entity
-// only observer that listens this entity would execute
-#[derive(EntityEvent)]
-pub struct UpdateTile {
-    pub entity: Entity,
-    pub new_type: TileType,
 }
 
 // To visualize the algorithm process, we have to run the algorithm step by step

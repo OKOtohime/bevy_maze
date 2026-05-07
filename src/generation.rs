@@ -1,12 +1,9 @@
-use std::time::Duration;
-use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, PaintTile, Position, TileType, TIMER_INTERVAL};
+use crate::core::{is_ready_to_step, AlgorithmSelection, AppState, Config, GenAlgorithm, Map, MapView, Position, TileState, TileType, TileUpdated};
 use bevy::app::{App, Plugin};
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
-use bevy::time::common_conditions::on_timer;
 use rand::prelude::{IndexedRandom, SliceRandom};
 use rand::RngExt;
-use crate::ui::{get_color_for_tile, COLOR_BARRIER, COLOR_END, COLOR_PASSIBLE, COLOR_START};
 
 pub struct MazeGenPlugin;
 
@@ -26,7 +23,7 @@ impl Plugin for MazeGenPlugin {
                 step_dfs.run_if(is_gen_algo(GenAlgorithm::DFS)),
                 step_prim.run_if(is_gen_algo(GenAlgorithm::Prim)),
                 step_kruskal.run_if(is_gen_algo(GenAlgorithm::Kruskal))
-            ).run_if(in_state(AppState::Gen).and(on_timer(Duration::from_millis(TIMER_INTERVAL)))));
+            ).run_if(in_state(AppState::Gen).and(is_ready_to_step)));
     }
 }
 
@@ -56,43 +53,37 @@ fn step_dfs(
     map_view: Res<MapView>,
     mut state: ResMut<DFSGenState>,
     mut next_state: ResMut<NextState<AppState>>,
+    config: Res<Config>,
 ) {
     let mut rng = rand::rng();
-    let directions = [(0, 2), (2, 0), (0, -2), (-2, 0)];
-
     if let Some(current) = state.stack.last().copied() {
         let mut unvisited_neighbors = Vec::new();
-        for (dx, dy) in directions.iter() {
-            let nx = current.x + dx;
-            let ny = current.y + dy;
-            if nx > 0 && nx < (map.width - 1) as i32 && ny > 0 && ny < (map.height - 1) as i32 {
-                if map.tiles[ny as usize][nx as usize] == TileType::Barrier {
-                    unvisited_neighbors.push((nx, ny, dx / 2, dy / 2));
-                }
+        for next_pos in map.get_neighbors(&current, 2) {
+            if map.get_tile_at_pos(&next_pos) == TileType::Barrier {
+                unvisited_neighbors.push(next_pos);
             }
+
         }
         if !unvisited_neighbors.is_empty() {
-            let &(nx, ny, wx, wy) = unvisited_neighbors.choose(&mut rng).unwrap();
-            let wall_y = (current.y + wy) as usize;
-            let wall_x = (current.x + wx) as usize;
-            let next_y = ny as usize;
-            let next_x = nx as usize;
-            map.tiles[wall_y][wall_x] = TileType::Passable(1);
-            map.tiles[next_y][next_x] = TileType::Passable(1);
-            commands.trigger(PaintTile {
-                entity: map_view.entities[wall_y][wall_x],
-                color: COLOR_PASSIBLE
+            let &next_pos = unvisited_neighbors.choose(&mut rng).unwrap();
+            let wall_y = (current.y + next_pos.y) >> 1;
+            let wall_x = (current.x + next_pos.x) >> 1;
+            map.set_tile(wall_x, wall_y, TileType::Passable(1));
+            map.set_tile(next_pos.x, next_pos.y, TileType::Passable(1));
+            commands.trigger(TileUpdated {
+                entity: map_view.get_entity(wall_x, wall_y),
+                state: TileState::Terrain(TileType::Passable(1))
             });
-            commands.trigger(PaintTile {
-                entity: map_view.entities[next_y][next_x],
-                color: COLOR_PASSIBLE
+            commands.trigger(TileUpdated {
+                entity: map_view.get_entity(next_pos.x, next_pos.y),
+                state: TileState::Terrain(TileType::Passable(1))
             });
-            state.stack.push(Position { x: nx, y: ny });
+            state.stack.push(next_pos);
         } else {
             state.stack.pop();
         }
     }else{
-        finish_generation(&mut commands, &mut map, &map_view, &mut next_state);
+        finish_generation(&mut commands, &mut map, &map_view, &mut next_state, &config);
     }
 }
 
@@ -104,12 +95,8 @@ pub struct PrimGenState {
 fn setup_prim(mut state: ResMut<PrimGenState>, map: Res<Map>) {
     state.frontier.clear();
     let start = Position::new(1, 1);
-    let directions = [(0, 2), (2, 0), (0, -2), (-2, 0)];
-    for (dx, dy) in directions.iter() {
-        let nx = start.x + dx; let ny = start.y + dy;
-        if nx > 0 && nx < (map.width - 1) as i32 && ny > 0 && ny < (map.height - 1) as i32 {
-            state.frontier.push((Position::new(start.x + dx/2, start.y + dy/2), Position::new(nx, ny)));
-        }
+    for next_pos in map.get_neighbors(&start, 2) {
+        state.frontier.push((Position::new((start.x + next_pos.x)>>1, (start.y + next_pos.y)>>1), next_pos));
     }
 }
 
@@ -119,29 +106,25 @@ fn step_prim(
     map_view: Res<MapView>,
     mut state: ResMut<PrimGenState>,
     mut next_app_state: ResMut<NextState<AppState>>,
+    config: Res<Config>,
 ) {
     while !state.frontier.is_empty() {
         let idx = rand::random_range(0..state.frontier.len());
         let (wall, next_cell) = state.frontier.swap_remove(idx);
-        if map.tiles[next_cell.y as usize][next_cell.x as usize] == TileType::Barrier {
-            map.tiles[wall.y as usize][wall.x as usize] = TileType::Passable(1);
-            map.tiles[next_cell.y as usize][next_cell.x as usize] = TileType::Passable(1);
-            commands.trigger(PaintTile { entity: map_view.entities[wall.y as usize][wall.x as usize], color: COLOR_PASSIBLE });
-            commands.trigger(PaintTile { entity: map_view.entities[next_cell.y as usize][next_cell.x as usize], color: COLOR_PASSIBLE });
-            let directions = [(0, 2), (2, 0), (0, -2), (-2, 0)];
-            for (dx, dy) in directions.iter() {
-                let nx = next_cell.x + dx;
-                let ny = next_cell.y + dy;
-                if nx > 0 && nx < (map.width - 1) as i32 && ny > 0 && ny < (map.height - 1) as i32 {
-                    if map.tiles[ny as usize][nx as usize] == TileType::Barrier {
-                        state.frontier.push((Position::new(next_cell.x + dx/2, next_cell.y + dy/2), Position::new(nx, ny)));
-                    }
+        if map.get_tile_at_pos(&next_cell) == TileType::Barrier {
+            map.set_tile(wall.x, wall.y, TileType::Passable(1));
+            map.set_tile(next_cell.x, next_cell.y, TileType::Passable(1));
+            commands.trigger(TileUpdated { entity: map_view.get_entity(wall.x, wall.y), state: TileState::Terrain(TileType::Passable(1)) });
+            commands.trigger(TileUpdated { entity: map_view.get_entity(next_cell.x, next_cell.y), state: TileState::Terrain(TileType::Passable(1)) });
+            for next_pos in map.get_neighbors(&next_cell, 2) {
+                if map.get_tile_at_pos(&next_pos) == TileType::Barrier {
+                    state.frontier.push((Position::new((next_cell.x + next_pos.x)>>1, (next_cell.y + next_pos.y)>>1), next_pos));
                 }
             }
             return;
         }
     }
-    finish_generation(&mut commands, &mut map, &map_view, &mut next_app_state);
+    finish_generation(&mut commands, &mut map, &map_view, &mut next_app_state, &config);
 }
 
 #[derive(Resource, Default)]
@@ -181,6 +164,7 @@ fn step_kruskal(
     map_view: Res<MapView>,
     mut state: ResMut<KruskalGenState>,
     mut next_app_state: ResMut<NextState<AppState>>,
+    config: Res<Config>,
 ) {
     while let Some(wall) = state.walls.pop() {
         let (cell1, cell2) = if wall.x % 2 == 0 {
@@ -192,16 +176,16 @@ fn step_kruskal(
         let root2 = find(&mut state.parent, cell2);
         if root1 != root2 {
             state.parent.insert(root1, root2);
-            map.tiles[wall.y as usize][wall.x as usize] = TileType::Passable(1);
-            map.tiles[cell1.y as usize][cell1.x as usize] = TileType::Passable(1);
-            map.tiles[cell2.y as usize][cell2.x as usize] = TileType::Passable(1);
-            commands.trigger(PaintTile { entity: map_view.entities[wall.y as usize][wall.x as usize], color: COLOR_PASSIBLE });
-            commands.trigger(PaintTile { entity: map_view.entities[cell1.y as usize][cell1.x as usize], color: COLOR_PASSIBLE });
-            commands.trigger(PaintTile { entity: map_view.entities[cell2.y as usize][cell2.x as usize], color: COLOR_PASSIBLE });
+            map.set_tile(wall.x, wall.y, TileType::Passable(1));
+            map.set_tile(cell1.x, cell1.y, TileType::Passable(1));
+            map.set_tile(cell2.x, cell2.y, TileType::Passable(1));
+            commands.trigger(TileUpdated { entity: map_view.get_entity(wall.x, wall.y), state: TileState::Terrain(TileType::Passable(1)) });
+            commands.trigger(TileUpdated { entity: map_view.get_entity(cell1.x, cell1.y), state: TileState::Terrain(TileType::Passable(1)) });
+            commands.trigger(TileUpdated { entity: map_view.get_entity(cell2.x, cell2.y), state: TileState::Terrain(TileType::Passable(1)) });
             return;
         }
     }
-    finish_generation(&mut commands, &mut map, &map_view, &mut next_app_state);
+    finish_generation(&mut commands, &mut map, &map_view, &mut next_app_state, &config);
 }
 
 fn reset_map(
@@ -209,11 +193,11 @@ fn reset_map(
     mut map: ResMut<Map>,
     map_view: Res<MapView>,
 ){
-    for y in 0..map.height {
-        for x in 0..map.width {
-            if map.tiles[y][x] != TileType::Barrier {
-                map.tiles[y][x] = TileType::Barrier;
-                commands.trigger(PaintTile { entity: map_view.entities[y][x], color: COLOR_BARRIER });
+    for y in 0..map.height as i32{
+        for x in 0..map.width as i32{
+            if map.get_tile(x, y) != TileType::Barrier {
+                map.set_tile(x, y, TileType::Barrier);
+                commands.trigger(TileUpdated { entity: map_view.get_entity(x, y), state: TileState::Terrain(TileType::Barrier) });
             }
         }
     }
@@ -223,23 +207,24 @@ fn finish_generation(
     commands: &mut Commands,
     map: &mut ResMut<Map>,
     map_view: &Res<MapView>,
-    next_app_state: &mut ResMut<NextState<AppState>>
+    next_app_state: &mut ResMut<NextState<AppState>>,
+    config: &Res<Config>,
 ) {
     // randomly make ways that cost more than 1 to passby
     let mut rng = rand::rng();
-    let mud_chance = 0.05;
+    let mud_chance = config.mud_chance;
 
-    for y in 0..map.height {
-        for x in 0..map.width {
-            if let TileType::Passable(1) = map.tiles[y][x] {
+    for y in 0..map.height as i32{
+        for x in 0..map.width as i32{
+            if let TileType::Passable(1) = map.get_tile(x, y) {
                 let is_near_start = x < 3 && y < 3;
-                let is_near_end = x > map.width - 4 && y > map.height - 4;
+                let is_near_end = x > (map.width - 4) as i32 && y > (map.height - 4) as i32;
                 if !is_near_start && !is_near_end && rng.random_bool(mud_chance) {
                     let weight = rng.random_range(2..=10);
-                    map.tiles[y][x] = TileType::Passable(weight);
-                    commands.trigger(PaintTile {
-                        entity: map_view.entities[y][x],
-                        color: get_color_for_tile(map.tiles[y][x])
+                    map.set_tile(x, y, TileType::Passable(weight));
+                    commands.trigger(TileUpdated {
+                        entity: map_view.get_entity(x, y),
+                        state: TileState::Terrain(map.get_tile(x, y)),
                     });
                 }
             }
@@ -247,10 +232,10 @@ fn finish_generation(
     }
 
     // Setup start and end
-    map.tiles[1][1] = TileType::Start;
-    commands.trigger(PaintTile { entity: map_view.entities[1][1], color: COLOR_START });
-    let end_y = map.height - 2; let end_x = map.width - 2;
-    map.tiles[end_y][end_x] = TileType::End;
-    commands.trigger(PaintTile { entity: map_view.entities[end_y][end_x], color: COLOR_END });
+    map.set_tile(1, 1, TileType::Start);
+    commands.trigger(TileUpdated { entity: map_view.get_entity(1, 1), state: TileState::Terrain(TileType::Start) });
+    let end_y = (map.height - 2) as i32; let end_x = (map.width - 2) as i32;
+    map.set_tile(end_x, end_y, TileType::End);
+    commands.trigger(TileUpdated { entity: map_view.get_entity(end_x, end_y), state: TileState::Terrain(TileType::End) });
     next_app_state.set(AppState::Idle);
 }

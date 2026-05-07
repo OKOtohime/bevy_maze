@@ -1,4 +1,4 @@
-use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, PaintTile, SolAlgorithm, TileType};
+use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, SolAlgorithm, TileState, TileType, TileUpdated};
 use bevy::app::App;
 use bevy::prelude::*;
 
@@ -173,7 +173,9 @@ fn setup_map_ui(
     map: Res<Map>,
 ){
     let mut map_view = MapView {
-        entities: vec![vec![Entity::PLACEHOLDER; map.width]; map.height],
+        width: map.width,
+        height: map.height,
+        entities: vec![Entity::PLACEHOLDER; map.width * map.height],
     };
     let mut observer = Observer::new(on_paint_tile);
 
@@ -190,10 +192,10 @@ fn setup_map_ui(
     let offset_x = -(DESKTOP_WIDTH as f32 / 2.0) + ui_pannel_width + (usable_width / 2.0);
     let offset_y = 0.0;
 
-    for y in 0..map.height {
-        for x in 0..map.width {
-            let tile_type = map.tiles[y][x];
-            let color = get_color_for_tile(tile_type);
+    for y in 0..map.height as i32{
+        for x in 0..map.width as i32 {
+            let tile_type = map.get_tile(x, y);
+            let color = get_color_for_state(TileState::Terrain(tile_type));
             let base_x = (x as f32) * tile_size - (map_pixel_width / 2.0) + (tile_size / 2.0);
             let base_y = (y as f32) * tile_size - (map_pixel_height / 2.0) + (tile_size / 2.0);
             let entity = commands.spawn((
@@ -208,7 +210,7 @@ fn setup_map_ui(
                     0.0,
                 )
             )).id();
-            map_view.entities[y][x] = entity;
+            map_view.set_entity(x, y, entity);
             observer.watch_entity(entity);
         }
     }
@@ -216,39 +218,43 @@ fn setup_map_ui(
     commands.spawn(observer);
 }
 
-pub const COLOR_BARRIER: Color = Color::srgb(0.2, 0.2, 0.2);
-pub const COLOR_PASSIBLE: Color = Color::srgb(0.9, 0.9, 0.9);
-pub const COLOR_START: Color = Color::srgb(0.2, 0.8, 0.2);
-pub const COLOR_END: Color = Color::srgb(0.8, 0.2, 0.2);
-pub const COLOR_VISITED: Color = Color::srgb(0.4, 0.4, 0.4);
-pub const COLOR_PATH: Color = Color::srgb(0.8, 0.8, 0.2);
+const COLOR_BARRIER: Color = Color::srgb(0.2, 0.2, 0.2);
+const COLOR_PASSIBLE: Color = Color::srgb(0.9, 0.9, 0.9);
+const COLOR_START: Color = Color::srgb(0.2, 0.8, 0.2);
+const COLOR_END: Color = Color::srgb(0.8, 0.2, 0.2);
+const COLOR_VISITED: Color = Color::srgb(0.4, 0.4, 0.4);
+const COLOR_PATH: Color = Color::srgb(0.8, 0.8, 0.2);
 
 fn on_paint_tile(
-    trigger: On<PaintTile>,
+    trigger: On<TileUpdated>,
     mut sprites: Query<&mut Sprite>
 ) {
     if let Ok(mut sprite) = sprites.get_mut(trigger.entity) {
-        sprite.color = trigger.color;
+        sprite.color = get_color_for_state(trigger.state);
     }
 }
 
-pub fn get_color_for_tile(tile_type: TileType) -> Color {
-    match tile_type {
-        TileType::Barrier => COLOR_BARRIER,
-        TileType::Passable(cost) => {
-            if cost == 1 {
-                COLOR_PASSIBLE
-            }else{
-                let t = (cost as f32 - 2.0) / 8.0;
-                let r_start = 0.8; let g_start = 0.7; let b_start = 0.5;
-                let r_end = 0.3; let g_end = 0.15; let b_end = 0.05;
-                let r = r_start * (1.0 - t) + r_end * t;
-                let g = g_start * (1.0 - t) + g_end * t;
-                let b = b_start * (1.0 - t) + b_end * t;
-                Color::srgb(r, g, b)
-            }
+pub fn get_color_for_state(state: TileState) -> Color {
+    match state {
+        TileState::Terrain(tile_type) => match tile_type {
+            TileType::Barrier => COLOR_BARRIER,
+            TileType::Passable(cost) => {
+                if cost == 1 {
+                    COLOR_PASSIBLE
+                }else{
+                    let t = (cost as f32 - 2.0) / 8.0;
+                    let r_start = 0.8; let g_start = 0.7; let b_start = 0.5;
+                    let r_end = 0.3; let g_end = 0.15; let b_end = 0.05;
+                    let r = r_start * (1.0 - t) + r_end * t;
+                    let g = g_start * (1.0 - t) + g_end * t;
+                    let b = b_start * (1.0 - t) + b_end * t;
+                    Color::srgb(r, g, b)
+                }
+            },
+            TileType::Start => COLOR_START,
+            TileType::End => COLOR_END,
         },
-        TileType::Start => COLOR_START,
-        TileType::End => COLOR_END,
+        TileState::Visited => COLOR_VISITED,
+        TileState::Path => COLOR_PATH,
     }
 }

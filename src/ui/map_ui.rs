@@ -88,11 +88,11 @@ pub fn handle_sync_endpoints(
 ) {
     if ev_sync.read().next().is_some() {
         let Some(view) = map_view else { return };
-
+        // Reset map tile
         for y in 0..map.height as i32 {
             for x in 0..map.width as i32 {
                 let current_tile = *map.get(x, y);
-                if current_tile == TileType::Start || current_tile == TileType::End {
+                if current_tile != TileType::Barrier {
                     update_map_at_pos(&mut commands, &mut map, &view, IVec2::new(x, y), TileType::Passable(1));
                 }
             }

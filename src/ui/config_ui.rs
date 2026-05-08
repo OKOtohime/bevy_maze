@@ -79,24 +79,25 @@ pub fn config_panel_system(
 
             ui.heading("Algorithms");
 
-            ui.label("Generator:");
-            ui.add_enabled_ui(is_idle, |ui| {
-                ui.horizontal(|ui| {
-                    for &algo_name in &registry.generators{
-                        ui.radio_value(&mut selection.gen_algorithm, algo_name, algo_name);
-                    }
+            egui::ComboBox::from_label("Generator")
+                .selected_text(selection.gen_algorithm)
+                .show_ui(ui, |ui| {
+                    ui.add_enabled_ui(is_idle, |ui| {
+                        for &algo_name in &registry.generators {
+                            ui.selectable_value(&mut selection.gen_algorithm, algo_name, algo_name);
+                        }
+                    });
                 });
-            });
-
             ui.add_space(5.0);
-            ui.label("Solver:");
-            ui.add_enabled_ui(is_idle, |ui| {
-                ui.horizontal(|ui| {
-                    for &algo_name in &registry.solvers {
-                        ui.radio_value(&mut selection.sol_algorithm, algo_name, algo_name);
-                    }
+            egui::ComboBox::from_label("Solver")
+                .selected_text(selection.sol_algorithm)
+                .show_ui(ui, |ui| {
+                    ui.add_enabled_ui(is_idle, |ui| {
+                        for &algo_name in &registry.solvers {
+                            ui.selectable_value(&mut selection.sol_algorithm, algo_name, algo_name);
+                        }
+                    });
                 });
-            });
 
             ui.add_space(20.0);
 

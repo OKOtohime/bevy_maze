@@ -96,6 +96,7 @@ pub fn config_panel_system(
                 ui.radio_value(&mut current_sol, SolAlgorithm::BFS, "BFS");
                 ui.radio_value(&mut current_sol, SolAlgorithm::Dijkstra, "Dijkstra");
                 ui.radio_value(&mut current_sol, SolAlgorithm::AStar, "A*");
+                ui.radio_value(&mut current_sol, SolAlgorithm::BiBFS, "BiBFS");
             });
 
             ui.add_space(20.0);

@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 pub enum SolStepResult {
     Visited(IVec2), //
     Found(IVec2),   // Found end point
+    InProgress,
     Finished,       // no solution
 }
 
@@ -61,6 +62,7 @@ pub fn step_sol_algorithm<T: SteppedSolAlgorithm + Resource>(
                 ev_finished.write(PathfindingFinished);
                 break;
             }
+            SolStepResult::InProgress => {}
         }
     }
 }
@@ -112,7 +114,7 @@ impl<T: Send + Sync + 'static> Default for BestFirstState<T> {
 }
 
 pub fn setup_best_first_logic<T: Send + Sync + 'static>(
-    mut state: &mut BestFirstState<T>,
+    state: &mut BestFirstState<T>,
     map: &Res<Map>,
     config: &Res<Config>,
 ) {

@@ -37,6 +37,7 @@ pub enum SolAlgorithm {
     BFS,
     Dijkstra,
     AStar,
+    BiBFS
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]

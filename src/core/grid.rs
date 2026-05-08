@@ -22,11 +22,6 @@ impl<T> Grid2D<T> {
 
     pub fn get_at_pos(&self, pos: &IVec2) -> &T { &self.data[self.at(pos.x, pos.y)] }
 
-    pub fn get_mut(&mut self, x: i32, y: i32) -> &mut T {
-        let idx = self.at(x, y);
-        &mut self.data[idx]
-    }
-
     pub fn set(&mut self, x: i32, y: i32, value: T) {
         let idx = self.at(x, y);
         self.data[idx] = value;

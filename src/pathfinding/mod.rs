@@ -5,6 +5,7 @@ pub mod astar;
 pub mod bibfs;
 mod prelude;
 mod greedy_bfs;
+mod wall_follower;
 
 use crate::core::prelude::*;
 use bevy::prelude::*;
@@ -23,6 +24,7 @@ impl Plugin for MazeSolPlugin {
                 DijkstraPlugin,
                 AStarPlugin,
                 GreedyBFSPlugin,
+                WallFollowerPlugin,
             ));
     }
 }

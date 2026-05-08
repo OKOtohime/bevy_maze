@@ -15,21 +15,14 @@ impl Plugin for MazeGenPlugin {
         app.init_resource::<DFSGenState>()
             .init_resource::<PrimGenState>()
             .init_resource::<KruskalGenState>()
-            .add_systems(OnEnter(AppState::Gen), (
-                reset_map,
-                setup_dfs.run_if(is_gen_algo(GenAlgorithm::DFS)),
-                setup_prim.run_if(is_gen_algo(GenAlgorithm::Prim)),
-                setup_kruskal.run_if(is_gen_algo(GenAlgorithm::Kruskal))
-
-            ).chain())
+            .add_systems(OnEnter(AppState::Gen), reset_map)
+            .add_systems(OnEnter(ActiveGenState(GenAlgorithm::DFS)), setup_dfs)
+            .add_systems(OnEnter(ActiveGenState(GenAlgorithm::Prim)), setup_prim)
+            .add_systems(OnEnter(ActiveGenState(GenAlgorithm::Kruskal)), setup_kruskal)
             .add_systems(Update, (
-                step_gen_algorithm::<DFSGenState>.run_if(is_gen_algo(GenAlgorithm::DFS)),
-                step_gen_algorithm::<PrimGenState>.run_if(is_gen_algo(GenAlgorithm::Prim)),
-                step_gen_algorithm::<KruskalGenState>.run_if(is_gen_algo(GenAlgorithm::Kruskal))
-            ).run_if(in_state(AppState::Gen).and(is_ready_to_step)));
+                step_gen_algorithm::<DFSGenState>.run_if(in_state(ActiveGenState(GenAlgorithm::DFS))),
+                step_gen_algorithm::<PrimGenState>.run_if(in_state(ActiveGenState(GenAlgorithm::Prim))),
+                step_gen_algorithm::<KruskalGenState>.run_if(in_state(ActiveGenState(GenAlgorithm::Kruskal)))
+            ).run_if(is_ready_to_step));
     }
-}
-
-fn is_gen_algo(expected: GenAlgorithm) -> impl FnMut(Res<AlgorithmSelection>) -> bool + Clone {
-    move |selection: Res<AlgorithmSelection>| selection.gen_algorithm == expected
 }

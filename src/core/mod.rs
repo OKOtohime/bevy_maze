@@ -12,7 +12,10 @@ pub struct CorePlugin;
 impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
-            .init_resource::<AlgorithmSelection>()
+            .init_state::<GenAlgorithm>()
+            .init_state::<SolAlgorithm>()
+            .add_computed_state::<ActiveGenState>()
+            .add_computed_state::<ActiveSolState>()
             .init_resource::<Config>()
             .add_message::<GenerationFinished>()
             .add_message::<PathfindingFinished>()

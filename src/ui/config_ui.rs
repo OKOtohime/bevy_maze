@@ -6,13 +6,18 @@ use crate::ui::common::{MapResize, MapSyncEndpoints};
 pub fn config_panel_system(
     mut contexts: EguiContexts,
     mut config: ResMut<Config>,
-    mut selection: ResMut<AlgorithmSelection>,
     mut next_app_state: ResMut<NextState<AppState>>,
     app_state: Res<State<AppState>>,
+    gen_state: Res<State<GenAlgorithm>>,
+    mut next_gen_state: ResMut<NextState<GenAlgorithm>>,
+    sol_state: Res<State<SolAlgorithm>>,
+    mut next_sol_state: ResMut<NextState<SolAlgorithm>>,
     mut ev_resize: MessageWriter<MapResize>,
     mut ev_sync_pos: MessageWriter<MapSyncEndpoints>,
 ) {
     let is_idle = *app_state.get() == AppState::Idle;
+    let mut current_gen = *gen_state.get();
+    let mut current_sol = *sol_state.get();
 
     let mut size_changed = false;
     let mut pos_changed = false;
@@ -44,12 +49,12 @@ pub fn config_panel_system(
             });
 
             ui.separator();
-            
+
             ui.horizontal(|ui| {
                 ui.label("Speed:");
                 ui.add(egui::Slider::new(&mut config.speed_multiplier, 1..=50).text("steps/tick"));
             });
-            
+
             ui.separator();
 
             ui.heading("Generation");
@@ -80,17 +85,17 @@ pub fn config_panel_system(
 
             ui.label("Generator:");
             ui.horizontal(|ui| {
-                ui.radio_value(&mut selection.gen_algorithm, GenAlgorithm::DFS, "DFS");
-                ui.radio_value(&mut selection.gen_algorithm, GenAlgorithm::Prim, "Prim");
-                ui.radio_value(&mut selection.gen_algorithm, GenAlgorithm::Kruskal, "Kruskal");
+                ui.radio_value(&mut current_gen, GenAlgorithm::DFS, "DFS");
+                ui.radio_value(&mut current_gen, GenAlgorithm::Prim, "Prim");
+                ui.radio_value(&mut current_gen, GenAlgorithm::Kruskal, "Kruskal");
             });
 
             ui.add_space(5.0);
             ui.label("Solver:");
             ui.horizontal(|ui| {
-                ui.radio_value(&mut selection.sol_algorithm, SolAlgorithm::BFS, "BFS");
-                ui.radio_value(&mut selection.sol_algorithm, SolAlgorithm::Dijkstra, "Dijkstra");
-                ui.radio_value(&mut selection.sol_algorithm, SolAlgorithm::AStar, "A*");
+                ui.radio_value(&mut current_sol, SolAlgorithm::BFS, "BFS");
+                ui.radio_value(&mut current_sol, SolAlgorithm::Dijkstra, "Dijkstra");
+                ui.radio_value(&mut current_sol, SolAlgorithm::AStar, "A*");
             });
 
             ui.add_space(20.0);
@@ -111,6 +116,9 @@ pub fn config_panel_system(
                 ui.label("Powered by Bevy & Egui");
             });
         });
+
+    if current_gen != *gen_state.get() { next_gen_state.set(current_gen); }
+    if current_sol != *sol_state.get() { next_sol_state.set(current_sol); }
 
     let real_max_x = ((config.maze_width << 1) - 1) as i32;
     let real_max_y = ((config.maze_height << 1) - 1) as i32;

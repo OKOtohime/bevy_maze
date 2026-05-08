@@ -4,6 +4,7 @@ pub mod dijkstra;
 pub mod astar;
 pub mod bibfs;
 mod prelude;
+mod greedy_bfs;
 
 use crate::core::prelude::*;
 use bevy::prelude::*;
@@ -21,6 +22,7 @@ impl Plugin for MazeSolPlugin {
                 BiBFSPlugin,
                 DijkstraPlugin,
                 AStarPlugin,
+                GreedyBFSPlugin,
             ));
     }
 }

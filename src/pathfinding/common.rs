@@ -133,7 +133,7 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
     state: &mut BestFirstState<T>,
     map: &Map,
     tracker: &mut PathTracker,
-    heuristic: impl Fn(IVec2) -> i32,
+    calculate_priority: impl Fn(IVec2, i32) -> i32,
     config: &Config,
 ) -> SolStepResult {
     let end_pos = config.end_pos;
@@ -141,7 +141,7 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
 
     while let Some(node) = state.priority_queue.pop() {
         let current_g = state.g_score[map.at_pos(&node.position)];
-        let expected_f = current_g.saturating_add(heuristic(node.position));
+        let expected_f = calculate_priority(node.position, current_g);
         if node.priority <= expected_f {
             valid_node = Some(node);
             break;
@@ -170,7 +170,7 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
                     state.g_score[next_idx] = temp_g_score;
                     state.priority_queue.push(HeapNode {
                         position: next_pos,
-                        priority: temp_g_score + heuristic(next_pos),
+                        priority: calculate_priority(next_pos, temp_g_score),
                     });
                 }
             }

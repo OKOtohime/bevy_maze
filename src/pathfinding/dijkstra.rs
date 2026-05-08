@@ -28,7 +28,7 @@ impl SteppedSolAlgorithm for DijkstraState {
             self,
             &map,
             tracker,
-            |_| 0,
+            |_pos, g| g,
             &config
         )
     }

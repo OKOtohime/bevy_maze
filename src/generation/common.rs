@@ -35,7 +35,7 @@ pub fn finish_generation(
     commands: &mut Commands,
     map: &mut Map,
     map_view: &MapView,
-    next_app_state: &mut NextState<AppState>,
+    ev_finished: &mut MessageWriter<GenerationFinished>,
     config: &Config,
 ) {
     // randomly make ways that cost more than 1 to passby
@@ -58,5 +58,5 @@ pub fn finish_generation(
     // Setup start and end
     update_map_at_pos(commands, map, &map_view, config.start_pos, TileType::Start);
     update_map_at_pos(commands, map, &map_view, config.end_pos, TileType::End);
-    next_app_state.set(AppState::Idle);
+    ev_finished.write(GenerationFinished);
 }

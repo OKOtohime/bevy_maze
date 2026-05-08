@@ -30,11 +30,11 @@ pub fn step_dijkstra(
     map_view: Res<MapView>,
     mut state: ResMut<DijkstraState>,
     mut tracker: ResMut<PathTracker>,
-    mut next_state: ResMut<NextState<AppState>>,
+    mut ev_finished: MessageWriter<PathfindingFinished>,
     config: Res<Config>,
 ) {
     step_best_first_logic(
-        &mut commands, &map, &map_view, &mut tracker, &mut next_state,
+        &mut commands, &map, &map_view, &mut tracker, &mut ev_finished,
         &mut state,
         |_| 0,
         &config

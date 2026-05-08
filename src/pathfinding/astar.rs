@@ -1,12 +1,11 @@
 use super::prelude::*;
 use crate::core::prelude::*;
 use bevy::prelude::*;
-use std::collections::BinaryHeap;
 
 pub type AStarState = BestFirstState<AStarAlgo>;
 
 pub fn setup_astar(
-    mut state: ResMut<AStarState>, 
+    mut state: ResMut<AStarState>,
     map: Res<Map>,
     config: Res<Config>,
 ) {
@@ -34,12 +33,12 @@ pub fn step_astar(
     map_view: Res<MapView>,
     mut state: ResMut<AStarState>,
     mut tracker: ResMut<PathTracker>,
-    mut next_state: ResMut<NextState<AppState>>,
+    mut ev_finished: MessageWriter<PathfindingFinished>,
     config: Res<Config>,
 ) {
     let end_pos = IVec2::new((map.width - 2) as i32, (map.height - 2) as i32);
     step_best_first_logic(
-        &mut commands, &map, &map_view, &mut tracker, &mut next_state,
+        &mut commands, &map, &map_view, &mut tracker, &mut ev_finished,
         &mut state,
         |pos| (pos - end_pos).abs().element_sum(),
         &config

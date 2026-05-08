@@ -25,7 +25,7 @@ pub fn step_prim(
     mut map: ResMut<Map>,
     map_view: Res<MapView>,
     mut state: ResMut<PrimGenState>,
-    mut next_app_state: ResMut<NextState<AppState>>,
+    mut ev_finished: MessageWriter<GenerationFinished>,
     config: Res<Config>,
 ) {
     while !state.frontier.is_empty() {
@@ -42,5 +42,5 @@ pub fn step_prim(
             return;
         }
     }
-    finish_generation(&mut commands, &mut map, &map_view, &mut next_app_state, &config);
+    finish_generation(&mut commands, &mut map, &map_view, &mut ev_finished, &config);
 }

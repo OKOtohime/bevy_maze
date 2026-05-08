@@ -15,6 +15,7 @@ impl Plugin for CorePlugin {
             .init_resource::<AlgorithmSelection>()
             .init_resource::<Config>()
             .insert_resource(Map::new_maze(20, 20))
-            .add_systems(Update, tick_step_timer);
+            .add_systems(Update, tick_step_timer)
+            .add_systems(Update, handle_algorithm_finished);
     }
 }

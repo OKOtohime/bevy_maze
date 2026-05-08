@@ -55,7 +55,7 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
     map: &Map,
     map_view: &MapView,
     tracker: &mut PathTracker,
-    next_state: &mut NextState<AppState>,
+    ev_finished: &mut MessageWriter<PathfindingFinished>,
     state: &mut BestFirstState<T>,
     heuristic: impl Fn(IVec2) -> i32,
     config: &Config,
@@ -108,7 +108,7 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
             }
         }
     } else {
-        next_state.set(AppState::Idle);
+        ev_finished.write(PathfindingFinished);
     }
 }
 
@@ -144,14 +144,14 @@ pub fn draw_shortest_path(
     map: Res<Map>,
     map_view: Res<MapView>,
     mut tracker: ResMut<PathTracker>,
-    mut next_app_state: ResMut<NextState<AppState>>,
+    mut ev_finished: MessageWriter<PathfindingFinished>,
     config: Res<Config>,
 ) {
     if let Some(current_backtrack) = tracker.backtrack {
         if let Some(parent) = tracker.came_from[map.at_pos(&current_backtrack)] {
             if parent == (config.start_pos) {
                 tracker.backtrack = None;
-                next_app_state.set(AppState::Idle);
+                ev_finished.write(PathfindingFinished);
                 return;
             }
             commands.trigger(TileUpdated {

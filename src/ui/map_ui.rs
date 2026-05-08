@@ -143,16 +143,3 @@ pub fn get_color_for_state(state: TileState) -> Color {
         TileState::Path => COLOR_PATH,
     }
 }
-
-pub fn despawn_map(
-    mut commands: Commands,
-    tiles: Query<Entity, With<TileEntity>>,
-    map_view: Option<Res<MapView>>,
-) {
-    for entity in &tiles {
-        commands.entity(entity).despawn();
-    }
-    if map_view.is_some() {
-        commands.remove_resource::<MapView>();
-    }
-}

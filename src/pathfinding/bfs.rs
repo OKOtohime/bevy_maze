@@ -19,7 +19,7 @@ pub fn step_bfs(
     map: Res<Map>,
     map_view: Res<MapView>,
     mut state: ResMut<BFSState>,
-    mut next_state: ResMut<NextState<AppState>>,
+    mut ev_finished: MessageWriter<PathfindingFinished>,
     mut tracker: ResMut<PathTracker>,
     config: Res<Config>,
 ) {
@@ -47,6 +47,6 @@ pub fn step_bfs(
             }
         }
     } else {
-        next_state.set(AppState::Idle);
+        ev_finished.write(PathfindingFinished);
     }
 }

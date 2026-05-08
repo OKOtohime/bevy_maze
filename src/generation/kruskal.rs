@@ -42,7 +42,7 @@ pub fn step_kruskal(
     mut map: ResMut<Map>,
     map_view: Res<MapView>,
     mut state: ResMut<KruskalGenState>,
-    mut next_app_state: ResMut<NextState<AppState>>,
+    mut ev_finished: MessageWriter<GenerationFinished>,
     config: Res<Config>,
 ) {
     while let Some(wall) = state.walls.pop() {
@@ -61,5 +61,5 @@ pub fn step_kruskal(
             return;
         }
     }
-    finish_generation(&mut commands, &mut map, &map_view, &mut next_app_state, &config);
+    finish_generation(&mut commands, &mut map, &map_view, &mut ev_finished, &config);
 }

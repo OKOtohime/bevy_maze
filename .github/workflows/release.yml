@@ -1,0 +1,77 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'v0.1.0'
+        required: true
+        default: 'v1.0.0'
+      release_notes:
+        description: ''
+        required: false
+        default: ''
+
+jobs:
+  build-and-release:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: write
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: maze-linux-x86_64.tar.gz
+            binary_name: Maze
+          - os: windows-latest
+            asset_name: maze-windows-x86_64.zip
+            binary_name: Maze.exe
+          - os: macos-latest
+            asset_name: maze-macos-arm64.tar.gz
+            binary_name: Maze
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+      - name: Build Release
+        run: cargo build --release
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd target/release
+          tar -czvf ../../${{ matrix.asset_name }} ${{ matrix.binary_name }}
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd target/release
+          Compress-Archive -Path ${{ matrix.binary_name }} -DestinationPath ..\..\${{ matrix.asset_name }}
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: Release ${{ github.event.inputs.version }}
+          body: ${{ github.event.inputs.release_notes }}
+          files: ${{ matrix.asset_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

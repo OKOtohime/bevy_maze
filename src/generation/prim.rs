@@ -7,9 +7,13 @@ pub struct PrimGenState {
     pub frontier: Vec<(IVec2, IVec2)>, // (Wall, NextCell)
 }
 
-pub fn setup_prim(mut state: ResMut<PrimGenState>, map: Res<Map>) {
+pub fn setup_prim(
+    mut state: ResMut<PrimGenState>, 
+    map: Res<Map>,
+    config: Res<Config>,
+) {
     state.frontier.clear();
-    let start = IVec2::new(1, 1);
+    let start = config.start_pos;
     for next_pos in map.get_neighbors(&start, 2) {
         state.frontier.push((IVec2::new((start.x + next_pos.x)>>1, (start.y + next_pos.y)>>1), next_pos));
     }

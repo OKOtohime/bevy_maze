@@ -58,8 +58,9 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
     next_state: &mut NextState<AppState>,
     state: &mut BestFirstState<T>,
     heuristic: impl Fn(IVec2) -> i32,
+    config: &Config,
 ) {
-    let end_pos = IVec2::new((map.width - 2) as i32, (map.height - 2) as i32);
+    let end_pos = config.end_pos;
     let mut valid_node = None;
 
     while let Some(node) = state.priority_queue.pop() {
@@ -116,6 +117,7 @@ pub fn clear_previous_path(
     map: ResMut<Map>,
     map_view: Res<MapView>,
     mut tracker: ResMut<PathTracker>,
+    config: Res<Config>,
 ) {
     for y in 0..map.height as i32{
         for x in 0..map.width as i32{
@@ -133,7 +135,7 @@ pub fn clear_previous_path(
         tracker.came_from.fill(None);
     }
     tracker.backtrack = None;
-    let start_pos = IVec2 { x: 1, y: 1 };
+    let start_pos = config.start_pos;
     tracker.came_from[map.at_pos(&start_pos)] = Some(start_pos);
 }
 
@@ -143,10 +145,11 @@ pub fn draw_shortest_path(
     map_view: Res<MapView>,
     mut tracker: ResMut<PathTracker>,
     mut next_app_state: ResMut<NextState<AppState>>,
+    config: Res<Config>,
 ) {
     if let Some(current_backtrack) = tracker.backtrack {
         if let Some(parent) = tracker.came_from[map.at_pos(&current_backtrack)] {
-            if parent == (IVec2 { x: 1, y: 1 }) {
+            if parent == (config.start_pos) {
                 tracker.backtrack = None;
                 next_app_state.set(AppState::Idle);
                 return;

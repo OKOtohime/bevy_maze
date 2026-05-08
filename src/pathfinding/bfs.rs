@@ -8,9 +8,9 @@ pub struct BFSState {
     pub queue: VecDeque<IVec2>,
 }
 
-pub fn setup_bfs(mut state: ResMut<BFSState>) {
+pub fn setup_bfs(mut state: ResMut<BFSState>, config: Res<Config>) {
     state.queue.clear();
-    state.queue.push_back(IVec2::new(1, 1));
+    state.queue.push_back(config.start_pos);
     info!("Use BFS Algorithm");
 }
 
@@ -21,9 +21,10 @@ pub fn step_bfs(
     mut state: ResMut<BFSState>,
     mut next_state: ResMut<NextState<AppState>>,
     mut tracker: ResMut<PathTracker>,
+    config: Res<Config>,
 ) {
     if let Some(current) = state.queue.pop_front() {
-        let end_pos = IVec2::new((map.width - 2) as i32, (map.height - 2) as i32);
+        let end_pos = config.end_pos;
         if current == end_pos {
             tracker.backtrack = Some(current);
             return;

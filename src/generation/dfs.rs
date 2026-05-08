@@ -8,9 +8,9 @@ pub struct DFSGenState {
     pub stack: Vec<IVec2>,
 }
 
-pub fn setup_dfs(mut state: ResMut<DFSGenState>) {
+pub fn setup_dfs(mut state: ResMut<DFSGenState>, config: Res<Config>) {
     state.stack.clear();
-    state.stack.push(IVec2{ x: 1, y: 1 });
+    state.stack.push(config.start_pos);
     info!("Use DFS Algorithm");
 }
 

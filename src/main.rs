@@ -16,7 +16,7 @@ pub struct MazePlugin;
 impl PluginGroup for MazePlugin {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(CorePlugin{width: 35, height: 32})
+            .add(CorePlugin)
             .add(MazeGenPlugin)
             .add(MazeSolPlugin)
             .add(UIPlugin)

@@ -1,6 +1,6 @@
 [package]
 name = "Maze"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 
@@ -24,5 +24,7 @@ opt-level = 3
 debug = 0
 
 [profile.release]
+opt-level = "z"
 codegen-units = 1
-lto = "thin"
+lto = true
+strip = true

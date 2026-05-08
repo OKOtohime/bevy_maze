@@ -1,4 +1,4 @@
-use crate::core::{AlgorithmSelection, AppState, GenAlgorithm, Map, MapView, SolAlgorithm, TileState, TileType, TileUpdated};
+use crate::core::prelude::*;
 use bevy::app::App;
 use bevy::prelude::*;
 
@@ -50,7 +50,7 @@ fn setup_ui(mut commands: Commands) {
         spawn_label(parent, "Path Finder");
         spawn_btn_with_component(parent, "BFS", SolSelectBtn(SolAlgorithm::BFS));
         spawn_btn_with_component(parent, "Dijkstra", SolSelectBtn(SolAlgorithm::Dijkstra));
-        spawn_btn_with_component(parent, "A* Search", SolSelectBtn(SolAlgorithm::AStar));
+        spawn_btn_with_component(parent, "A*", SolSelectBtn(SolAlgorithm::AStar));
 
         spawn_label(parent, "Control");
         spawn_btn_with_component(parent, "Generate", GenerateBtn);
@@ -175,7 +175,7 @@ fn setup_map_ui(
     let mut map_view = MapView {
         width: map.width,
         height: map.height,
-        entities: vec![Entity::PLACEHOLDER; map.width * map.height],
+        data: vec![Entity::PLACEHOLDER; map.width * map.height],
     };
     let mut observer = Observer::new(on_paint_tile);
 
@@ -194,7 +194,7 @@ fn setup_map_ui(
 
     for y in 0..map.height as i32{
         for x in 0..map.width as i32 {
-            let tile_type = map.get_tile(x, y);
+            let tile_type = *map.get(x, y);
             let color = get_color_for_state(TileState::Terrain(tile_type));
             let base_x = (x as f32) * tile_size - (map_pixel_width / 2.0) + (tile_size / 2.0);
             let base_y = (y as f32) * tile_size - (map_pixel_height / 2.0) + (tile_size / 2.0);
@@ -210,7 +210,7 @@ fn setup_map_ui(
                     0.0,
                 )
             )).id();
-            map_view.set_entity(x, y, entity);
+            map_view.set(x, y, entity);
             observer.watch_entity(entity);
         }
     }

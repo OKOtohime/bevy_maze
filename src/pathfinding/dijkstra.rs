@@ -9,34 +9,19 @@ pub fn setup_dijkstra(
     map: Res<Map>,
     config: Res<Config>,
 ) {
-    state.priority_queue.clear();
-    let size = map.width * map.height;
-    if state.g_score.len() != size {
-        state.g_score = vec![i32::MAX; size];
-    } else {
-        state.g_score.fill(i32::MAX);
-    }
-
-    let start_pos = config.start_pos;
-    state.priority_queue.push(HeapNode { position: start_pos, priority: 0 });
-    state.g_score[map.at_pos(&start_pos)] = 0;
-
+    setup_best_first_logic(&mut state, &map, &config);
+    state.priority_queue.push(HeapNode { position: config.start_pos, priority: 0 });
     info!("Use Dijkstra Algorithm");
 }
 
-pub fn step_dijkstra(
-    mut commands: Commands,
-    map: Res<Map>,
-    map_view: Res<MapView>,
-    mut state: ResMut<DijkstraState>,
-    mut tracker: ResMut<PathTracker>,
-    mut ev_finished: MessageWriter<PathfindingFinished>,
-    config: Res<Config>,
-) {
-    step_best_first_logic(
-        &mut commands, &map, &map_view, &mut tracker, &mut ev_finished,
-        &mut state,
-        |_| 0,
-        &config
-    );
+impl SteppedSolAlgorithm for DijkstraState {
+    fn step(&mut self, map: &Map, config: &Config, tracker: &mut PathTracker) -> SolStepResult {
+        step_best_first_logic(
+            self,
+            &map,
+            tracker,
+            |_| 0,
+            &config
+        )
+    }
 }

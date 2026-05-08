@@ -20,27 +20,20 @@ pub fn setup_prim(
     info!("Use Prim's Algorithm");
 }
 
-pub fn step_prim(
-    mut commands: Commands,
-    mut map: ResMut<Map>,
-    map_view: Res<MapView>,
-    mut state: ResMut<PrimGenState>,
-    mut ev_finished: MessageWriter<GenerationFinished>,
-    config: Res<Config>,
-) {
-    while !state.frontier.is_empty() {
-        let idx = rand::random_range(0..state.frontier.len());
-        let (wall, next_cell) = state.frontier.swap_remove(idx);
-        if *map.get_at_pos(&next_cell) == TileType::Barrier {
-            update_map_at_pos(&mut commands, &mut map, &map_view, wall, TileType::Passable(1));
-            update_map_at_pos(&mut commands, &mut map, &map_view, next_cell, TileType::Passable(1));
-            for next_pos in map.get_neighbors(&next_cell, 2) {
-                if *map.get_at_pos(&next_pos) == TileType::Barrier {
-                    state.frontier.push((IVec2::new((next_cell.x + next_pos.x)>>1, (next_cell.y + next_pos.y)>>1), next_pos));
+impl SteppedGenAlgorithm for PrimGenState {
+    fn step(&mut self, map: &Map, _config: &Config) -> GenStepResult {
+        while !self.frontier.is_empty() {
+            let idx = rand::random_range(0..self.frontier.len());
+            let (wall, next_cell) = self.frontier.swap_remove(idx);
+            if *map.get_at_pos(&next_cell) == TileType::Barrier {
+                for next_pos in map.get_neighbors(&next_cell, 2) {
+                    if *map.get_at_pos(&next_pos) == TileType::Barrier {
+                        self.frontier.push((IVec2::new((next_cell.x + next_pos.x)>>1, (next_cell.y + next_pos.y)>>1), next_pos));
+                    }
                 }
+                return GenStepResult::TilesModified(vec![wall, next_cell])
             }
-            return;
         }
+        GenStepResult::Finished
     }
-    finish_generation(&mut commands, &mut map, &map_view, &mut ev_finished, &config);
 }

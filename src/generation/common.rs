@@ -2,6 +2,39 @@ use crate::core::prelude::*;
 use bevy::prelude::*;
 use rand::RngExt;
 
+pub enum GenStepResult {
+    TilesModified(Vec<IVec2>),  // Made new passible tile
+    InProgress, // Nothing to do
+    Finished    // finish generation
+}
+
+pub trait SteppedGenAlgorithm {
+    fn step(&mut self, map: &Map, config: &Config) -> GenStepResult;
+}
+
+pub fn step_gen_algorithm<T: SteppedGenAlgorithm + Resource>(
+    mut commands: Commands,
+    mut map: ResMut<Map>,
+    map_view: Res<MapView>,
+    mut algo_state: ResMut<T>,
+    mut ev_finished: MessageWriter<GenerationFinished>,
+    config: Res<Config>,
+){
+    for _ in 0..config.speed_multiplier {
+        match algo_state.step(&map, &config) {
+            GenStepResult::TilesModified(tiles) => {
+                for pos in tiles{
+                    update_map_at_pos(&mut commands, &mut map, &map_view, pos, TileType::Passable(1));
+                }
+            }
+            GenStepResult::InProgress => {}
+            GenStepResult::Finished => {
+                finish_generation(&mut commands, &mut map, &map_view, &mut ev_finished, &config);
+            }
+        }
+    }
+}
+
 // Wrap map tile update with trigger
 pub fn update_map_at_pos(
     commands: &mut Commands,

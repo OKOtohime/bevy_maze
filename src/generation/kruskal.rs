@@ -37,29 +37,21 @@ pub fn setup_kruskal(mut state: ResMut<KruskalGenState>, map: Res<Map>) {
     info!("Use Kruskal's Algorithm");
 }
 
-pub fn step_kruskal(
-    mut commands: Commands,
-    mut map: ResMut<Map>,
-    map_view: Res<MapView>,
-    mut state: ResMut<KruskalGenState>,
-    mut ev_finished: MessageWriter<GenerationFinished>,
-    config: Res<Config>,
-) {
-    while let Some(wall) = state.walls.pop() {
-        let (cell1, cell2) = if wall.x % 2 == 0 {
-            (IVec2::new(wall.x - 1, wall.y), IVec2::new(wall.x + 1, wall.y))
-        } else {
-            (IVec2::new(wall.x, wall.y - 1), IVec2::new(wall.x, wall.y + 1))
-        };
-        let root1 = find(&mut state.parent, map.at_pos(&cell1));
-        let root2 = find(&mut state.parent, map.at_pos(&cell2));
-        if root1 != root2 {
-            state.parent[root1] = root2;
-            update_map_at_pos(&mut commands, &mut map, &map_view, wall, TileType::Passable(1));
-            update_map_at_pos(&mut commands, &mut map, &map_view, cell1, TileType::Passable(1));
-            update_map_at_pos(&mut commands, &mut map, &map_view, cell2, TileType::Passable(1));
-            return;
+impl SteppedGenAlgorithm for KruskalGenState {
+    fn step(&mut self, map: &Map, _config: &Config) -> GenStepResult {
+        while let Some(wall) = self.walls.pop() {
+            let (cell1, cell2) = if wall.x % 2 == 0 {
+                (IVec2::new(wall.x - 1, wall.y), IVec2::new(wall.x + 1, wall.y))
+            } else {
+                (IVec2::new(wall.x, wall.y - 1), IVec2::new(wall.x, wall.y + 1))
+            };
+            let root1 = find(&mut self.parent, map.at_pos(&cell1));
+            let root2 = find(&mut self.parent, map.at_pos(&cell2));
+            if root1 != root2 {
+                self.parent[root1] = root2;
+                return GenStepResult::TilesModified(vec![wall, cell1, cell2])
+            }
         }
+        GenStepResult::Finished
     }
-    finish_generation(&mut commands, &mut map, &map_view, &mut ev_finished, &config);
 }

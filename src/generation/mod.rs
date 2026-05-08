@@ -23,9 +23,9 @@ impl Plugin for MazeGenPlugin {
 
             ).chain())
             .add_systems(Update, (
-                step_dfs.run_if(is_gen_algo(GenAlgorithm::DFS)),
-                step_prim.run_if(is_gen_algo(GenAlgorithm::Prim)),
-                step_kruskal.run_if(is_gen_algo(GenAlgorithm::Kruskal))
+                step_gen_algorithm::<DFSGenState>.run_if(is_gen_algo(GenAlgorithm::DFS)),
+                step_gen_algorithm::<PrimGenState>.run_if(is_gen_algo(GenAlgorithm::Prim)),
+                step_gen_algorithm::<KruskalGenState>.run_if(is_gen_algo(GenAlgorithm::Kruskal))
             ).run_if(in_state(AppState::Gen).and(is_ready_to_step)));
     }
 }

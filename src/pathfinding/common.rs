@@ -4,6 +4,67 @@ use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::marker::PhantomData;
 
+pub enum SolStepResult {
+    Visited(IVec2), //
+    Found(IVec2),   // Found end point
+    Finished,       // no solution
+}
+
+pub trait SteppedSolAlgorithm {
+    fn step(&mut self, map: &Map, config: &Config, tracker: &mut PathTracker) -> SolStepResult;
+}
+
+pub fn step_sol_algorithm<T: SteppedSolAlgorithm + Resource>(
+    mut commands: Commands,
+    map: Res<Map>,
+    map_view: Res<MapView>,
+    mut algo_state: ResMut<T>,
+    mut tracker: ResMut<PathTracker>,
+    mut ev_finished: MessageWriter<PathfindingFinished>,
+    config: Res<Config>,
+) {
+    for _ in 0..config.speed_multiplier {
+        // Backtracking
+        if let Some(current_backtrack) = tracker.backtrack {
+            if let Some(parent) = tracker.came_from[map.at_pos(&current_backtrack)] {
+                if parent == config.start_pos {
+                    tracker.backtrack = None;
+                    ev_finished.write(PathfindingFinished);
+                    break;
+                }
+                commands.trigger(TileUpdated {
+                    entity: *map_view.get_at_pos(&parent),
+                    state: TileState::Path,
+                });
+                tracker.backtrack = Some(parent);
+            } else {
+                break;
+            }
+            continue;
+        }
+        // Searching
+        match algo_state.step(&map, &config, &mut tracker) {
+            SolStepResult::Visited(pos) => {
+                let tile = *map.get(pos.x, pos.y);
+                if matches!(tile, TileType::Passable(_)) {
+                    commands.trigger(TileUpdated {
+                        entity: *map_view.get(pos.x, pos.y),
+                        state: TileState::Visited
+                    });
+                }
+            }
+            SolStepResult::Found(end_pos) => {
+                tracker.backtrack = Some(end_pos);
+                break;
+            }
+            SolStepResult::Finished => {
+                ev_finished.write(PathfindingFinished);
+                break;
+            }
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct HeapNode {
     pub position: IVec2,
@@ -50,16 +111,29 @@ impl<T: Send + Sync + 'static> Default for BestFirstState<T> {
     }
 }
 
+pub fn setup_best_first_logic<T: Send + Sync + 'static>(
+    mut state: &mut BestFirstState<T>,
+    map: &Res<Map>,
+    config: &Res<Config>,
+) {
+    state.priority_queue.clear();
+    let size = map.width * map.height;
+    if state.g_score.len() != size {
+        state.g_score = vec![i32::MAX; size];
+    } else {
+        state.g_score.fill(i32::MAX);
+    }
+    let start_pos = config.start_pos;
+    state.g_score[map.at_pos(&start_pos)] = 0;
+}
+
 pub fn step_best_first_logic<T: Send + Sync + 'static>(
-    commands: &mut Commands,
-    map: &Map,
-    map_view: &MapView,
-    tracker: &mut PathTracker,
-    ev_finished: &mut MessageWriter<PathfindingFinished>,
     state: &mut BestFirstState<T>,
+    map: &Map,
+    tracker: &mut PathTracker,
     heuristic: impl Fn(IVec2) -> i32,
     config: &Config,
-) {
+) -> SolStepResult {
     let end_pos = config.end_pos;
     let mut valid_node = None;
 
@@ -76,16 +150,9 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
         let current = node.position;
         if current == end_pos {
             tracker.backtrack = Some(current);
-            return;
+            return SolStepResult::Found(end_pos)
         }
         let current_g = state.g_score[map.at_pos(&current)];
-        let tile = *map.get(current.x, current.y);
-        if matches!(tile, TileType::Passable(_)) {
-            commands.trigger(TileUpdated {
-                entity: *map_view.get(current.x, current.y),
-                state: TileState::Visited
-            });
-        }
         for next_pos in map.get_neighbors(&current, 1) {
             let target_tile = *map.get(next_pos.x, next_pos.y);
             if matches!(target_tile, TileType::Passable(_)) || target_tile == TileType::End {
@@ -99,7 +166,6 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
                 if temp_g_score < state.g_score[next_idx] {
                     tracker.came_from[next_idx] = Some(current);
                     state.g_score[next_idx] = temp_g_score;
-
                     state.priority_queue.push(HeapNode {
                         position: next_pos,
                         priority: temp_g_score + heuristic(next_pos),
@@ -107,8 +173,9 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
                 }
             }
         }
+        SolStepResult::Visited(current)
     } else {
-        ev_finished.write(PathfindingFinished);
+        SolStepResult::Finished
     }
 }
 
@@ -137,28 +204,4 @@ pub fn clear_previous_path(
     tracker.backtrack = None;
     let start_pos = config.start_pos;
     tracker.came_from[map.at_pos(&start_pos)] = Some(start_pos);
-}
-
-pub fn draw_shortest_path(
-    mut commands: Commands,
-    map: Res<Map>,
-    map_view: Res<MapView>,
-    mut tracker: ResMut<PathTracker>,
-    mut ev_finished: MessageWriter<PathfindingFinished>,
-    config: Res<Config>,
-) {
-    if let Some(current_backtrack) = tracker.backtrack {
-        if let Some(parent) = tracker.came_from[map.at_pos(&current_backtrack)] {
-            if parent == (config.start_pos) {
-                tracker.backtrack = None;
-                ev_finished.write(PathfindingFinished);
-                return;
-            }
-            commands.trigger(TileUpdated {
-                entity: *map_view.get_at_pos(&parent),
-                state: TileState::Path
-            });
-            tracker.backtrack = Some(parent);
-        }
-    }
 }

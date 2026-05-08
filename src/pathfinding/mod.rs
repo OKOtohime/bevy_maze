@@ -23,23 +23,13 @@ impl Plugin for MazeSolPlugin {
                 setup_astar.run_if(is_sol_algo(SolAlgorithm::AStar)),
             ).chain())
             .add_systems(Update, (
-                step_bfs.run_if(is_sol_algo(SolAlgorithm::BFS)),
-                step_dijkstra.run_if(is_sol_algo(SolAlgorithm::Dijkstra)),
-                step_astar.run_if(is_sol_algo(SolAlgorithm::AStar)),
-            ).run_if(in_state(AppState::Sol).and(is_searching).and(is_ready_to_step)))
-            .add_systems(Update, draw_shortest_path
-                .run_if(in_state(AppState::Sol).and(is_backtracking).and(is_ready_to_step)));
+                step_sol_algorithm::<BFSState>.run_if(is_sol_algo(SolAlgorithm::BFS)),
+                step_sol_algorithm::<DijkstraState>.run_if(is_sol_algo(SolAlgorithm::Dijkstra)),
+                step_sol_algorithm::<AStarState>.run_if(is_sol_algo(SolAlgorithm::AStar)),
+            ).run_if(in_state(AppState::Sol).and(is_ready_to_step)));
     }
 }
 
 fn is_sol_algo(expected: SolAlgorithm) -> impl FnMut(Res<AlgorithmSelection>) -> bool + Clone {
     move |selection: Res<AlgorithmSelection>| selection.sol_algorithm == expected
-}
-
-fn is_searching(tracker: Res<PathTracker>) -> bool {
-    tracker.backtrack.is_none()
-}
-
-fn is_backtracking(tracker: Res<PathTracker>) -> bool {
-    tracker.backtrack.is_some()
 }

@@ -44,6 +44,13 @@ pub fn config_panel_system(
             });
 
             ui.separator();
+            
+            ui.horizontal(|ui| {
+                ui.label("Speed:");
+                ui.add(egui::Slider::new(&mut config.speed_multiplier, 1..=50).text("steps/tick"));
+            });
+            
+            ui.separator();
 
             ui.heading("Generation");
             ui.horizontal(|ui| {

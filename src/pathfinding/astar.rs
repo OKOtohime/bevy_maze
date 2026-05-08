@@ -9,38 +9,21 @@ pub fn setup_astar(
     map: Res<Map>,
     config: Res<Config>,
 ) {
-    state.priority_queue.clear();
-    let size = map.width * map.height;
-    if state.g_score.len() != size {
-        state.g_score = vec![i32::MAX; size];
-    } else {
-        state.g_score.fill(i32::MAX);
-    }
-
-    let start_pos = config.start_pos;
-    let end_pos = config.end_pos;
-    let initial_heuristic = (start_pos - end_pos).abs().element_sum();
-
-    state.priority_queue.push(HeapNode { position: start_pos, priority: initial_heuristic });
-    state.g_score[map.at_pos(&start_pos)] = 0;
-
+    setup_best_first_logic(&mut state, &map, &config);
+    let initial_heuristic = (config.start_pos - config.end_pos).abs().element_sum();
+    state.priority_queue.push(HeapNode { position: config.start_pos, priority: initial_heuristic });
     info!("Use A* Algorithm");
 }
 
-pub fn step_astar(
-    mut commands: Commands,
-    map: Res<Map>,
-    map_view: Res<MapView>,
-    mut state: ResMut<AStarState>,
-    mut tracker: ResMut<PathTracker>,
-    mut ev_finished: MessageWriter<PathfindingFinished>,
-    config: Res<Config>,
-) {
-    let end_pos = config.end_pos;
-    step_best_first_logic(
-        &mut commands, &map, &map_view, &mut tracker, &mut ev_finished,
-        &mut state,
-        |pos| (pos - end_pos).abs().element_sum(),
-        &config
-    );
+impl SteppedSolAlgorithm for AStarState {
+    fn step(&mut self, map: &Map, config: &Config, tracker: &mut PathTracker) -> SolStepResult {
+        let end_pos = config.end_pos;
+        step_best_first_logic(
+            self,
+            &map,
+            tracker,
+            |pos| (pos - end_pos).abs().element_sum(),
+            &config
+        )
+    }
 }

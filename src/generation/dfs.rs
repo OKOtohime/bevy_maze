@@ -14,30 +14,25 @@ pub fn setup_dfs(mut state: ResMut<DFSGenState>, config: Res<Config>) {
     info!("Use DFS Algorithm");
 }
 
-pub fn step_dfs(
-    mut commands: Commands,
-    mut map: ResMut<Map>,
-    map_view: Res<MapView>,
-    mut state: ResMut<DFSGenState>,
-    mut ev_finished: MessageWriter<GenerationFinished>,
-    config: Res<Config>,
-) {
-    let mut rng = rand::rng();
-    if let Some(current) = state.stack.last().copied() {
-        let unvisited_neighbors: Vec<IVec2> = map
-            .get_neighbors(&current, 2)
-            .filter(|pos| *map.get_at_pos(pos) == TileType::Barrier)
-            .collect();
-        if !unvisited_neighbors.is_empty() {
-            let &next_pos = unvisited_neighbors.choose(&mut rng).unwrap();
-            let wall_pos = (current + next_pos) >> 1;
-            update_map_at_pos(&mut commands, &mut map, &map_view, wall_pos, TileType::Passable(1));
-            update_map_at_pos(&mut commands, &mut map, &map_view, next_pos, TileType::Passable(1));
-            state.stack.push(next_pos);
-        } else {
-            state.stack.pop();
+impl SteppedGenAlgorithm for DFSGenState {
+    fn step(&mut self, map: &Map, _config: &Config) -> GenStepResult {
+        let mut rng = rand::rng();
+        if let Some(current) = self.stack.last().copied() {
+            let unvisited_neighbors: Vec<IVec2> = map
+                .get_neighbors(&current, 2)
+                .filter(|pos| *map.get_at_pos(pos) == TileType::Barrier)
+                .collect();
+            if !unvisited_neighbors.is_empty() {
+                let &next_pos = unvisited_neighbors.choose(&mut rng).unwrap();
+                let wall_pos = (current + next_pos) >> 1;
+                self.stack.push(next_pos);
+                GenStepResult::TilesModified(vec![wall_pos, next_pos])
+            } else {
+                self.stack.pop();
+                GenStepResult::InProgress
+            }
+        }else{
+            GenStepResult::Finished
         }
-    }else{
-        finish_generation(&mut commands, &mut map, &map_view, &mut ev_finished, &config);
     }
 }

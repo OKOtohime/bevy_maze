@@ -5,6 +5,7 @@ use bevy::prelude::*;
 #[derive(Resource)]
 pub struct Config {
     pub step_timer: Timer,
+    pub speed_multiplier: u32, // step multiplier steps per frame
     pub mud_chance: f64,
     pub maze_width: usize,
     pub maze_height: usize,
@@ -16,6 +17,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             step_timer: Timer::new(Duration::from_millis(10), TimerMode::Repeating),
+            speed_multiplier: 1,
             mud_chance: 0.0,
             maze_width: 20,
             maze_height: 20,

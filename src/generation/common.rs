@@ -7,7 +7,7 @@ pub fn update_map_at_pos(
     commands: &mut Commands,
     map: &mut Map,
     map_view: &MapView,
-    pos: Position,
+    pos: IVec2,
     tile_type: TileType,
 ) {
     map.set(pos.x, pos.y, tile_type);
@@ -25,7 +25,7 @@ pub fn reset_map(
     for y in 0..map.height as i32{
         for x in 0..map.width as i32{
             if *map.get(x, y) != TileType::Barrier {
-                update_map_at_pos(&mut commands, &mut map, &map_view, Position{x, y}, TileType::Barrier);
+                update_map_at_pos(&mut commands, &mut map, &map_view, IVec2{x, y}, TileType::Barrier);
             }
         }
     }
@@ -49,15 +49,15 @@ pub fn finish_generation(
                 let is_near_end = x > (map.width - 4) as i32 && y > (map.height - 4) as i32;
                 if !is_near_start && !is_near_end && rng.random_bool(mud_chance) {
                     let weight = rng.random_range(2..=10);
-                    update_map_at_pos(&mut commands, &mut map, &map_view, Position{x, y}, TileType::Passable(weight));
+                    update_map_at_pos(&mut commands, &mut map, &map_view, IVec2{x, y}, TileType::Passable(weight));
                 }
             }
         }
     }
 
     // Setup start and end
-    update_map_at_pos(&mut commands, &mut map, &map_view, Position{x: 1, y: 1}, TileType::Start);
+    update_map_at_pos(&mut commands, &mut map, &map_view, IVec2{x: 1, y: 1}, TileType::Start);
     let end_y = (map.height - 2) as i32; let end_x = (map.width - 2) as i32;
-    update_map_at_pos(&mut commands, &mut map, &map_view, Position{x: end_x, y: end_y}, TileType::End);
+    update_map_at_pos(&mut commands, &mut map, &map_view, IVec2{x: end_x, y: end_y}, TileType::End);
     next_app_state.set(AppState::Idle);
 }

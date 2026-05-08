@@ -4,14 +4,14 @@ use super::prelude::*;
 
 #[derive(Resource, Default)]
 pub struct PrimGenState {
-    pub frontier: Vec<(Position, Position)>, // (Wall, NextCell)
+    pub frontier: Vec<(IVec2, IVec2)>, // (Wall, NextCell)
 }
 
 pub fn setup_prim(mut state: ResMut<PrimGenState>, map: Res<Map>) {
     state.frontier.clear();
-    let start = Position::new(1, 1);
+    let start = IVec2::new(1, 1);
     for next_pos in map.get_neighbors(&start, 2) {
-        state.frontier.push((Position::new((start.x + next_pos.x)>>1, (start.y + next_pos.y)>>1), next_pos));
+        state.frontier.push((IVec2::new((start.x + next_pos.x)>>1, (start.y + next_pos.y)>>1), next_pos));
     }
     info!("Use Prim's Algorithm");
 }
@@ -32,7 +32,7 @@ pub fn step_prim(
             update_map_at_pos(&mut commands, &mut map, &map_view, next_cell, TileType::Passable(1));
             for next_pos in map.get_neighbors(&next_cell, 2) {
                 if *map.get_at_pos(&next_pos) == TileType::Barrier {
-                    state.frontier.push((Position::new((next_cell.x + next_pos.x)>>1, (next_cell.y + next_pos.y)>>1), next_pos));
+                    state.frontier.push((IVec2::new((next_cell.x + next_pos.x)>>1, (next_cell.y + next_pos.y)>>1), next_pos));
                 }
             }
             return;

@@ -1,7 +1,6 @@
-use bevy::prelude::*;
-use std::collections::BinaryHeap;
-use crate::core::prelude::*;
 use super::prelude::*;
+use crate::core::prelude::*;
+use bevy::prelude::*;
 
 pub type DijkstraState = BestFirstState<DijkstraAlgo>;
 
@@ -14,7 +13,7 @@ pub fn setup_dijkstra(mut state: ResMut<DijkstraState>, map: Res<Map>) {
         state.g_score.fill(i32::MAX);
     }
 
-    let start_pos = Position::new(1, 1);
+    let start_pos = IVec2::new(1, 1);
     state.priority_queue.push(HeapNode { position: start_pos, priority: 0 });
     state.g_score[map.at_pos(&start_pos)] = 0;
 

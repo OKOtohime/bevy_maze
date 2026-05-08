@@ -5,7 +5,7 @@ use rand::prelude::SliceRandom;
 
 #[derive(Resource, Default)]
 pub struct KruskalGenState {
-    pub walls: Vec<Position>,
+    pub walls: Vec<IVec2>,
     pub parent: Vec<usize>,
 }
 
@@ -25,10 +25,10 @@ pub fn setup_kruskal(mut state: ResMut<KruskalGenState>, map: Res<Map>) {
     for y in (1..map.height as i32 - 1).step_by(2) {
         for x in (1..map.width as i32 - 1).step_by(2) {
             if x + 2 < map.width as i32 {
-                state.walls.push(Position::new(x + 1, y));
+                state.walls.push(IVec2::new(x + 1, y));
             }
             if y + 2 < map.height as i32 {
-                state.walls.push(Position::new(x, y + 1));
+                state.walls.push(IVec2::new(x, y + 1));
             }
         }
     }
@@ -47,9 +47,9 @@ pub fn step_kruskal(
 ) {
     while let Some(wall) = state.walls.pop() {
         let (cell1, cell2) = if wall.x % 2 == 0 {
-            (Position::new(wall.x - 1, wall.y), Position::new(wall.x + 1, wall.y))
+            (IVec2::new(wall.x - 1, wall.y), IVec2::new(wall.x + 1, wall.y))
         } else {
-            (Position::new(wall.x, wall.y - 1), Position::new(wall.x, wall.y + 1))
+            (IVec2::new(wall.x, wall.y - 1), IVec2::new(wall.x, wall.y + 1))
         };
         let root1 = find(&mut state.parent, map.at_pos(&cell1));
         let root2 = find(&mut state.parent, map.at_pos(&cell2));

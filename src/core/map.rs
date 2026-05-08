@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use super::prelude::{Grid2D, Position};
+use super::prelude::{Grid2D};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TileType {
@@ -38,11 +38,16 @@ impl Map {
         x > 0 && x < (self.width - 1) as i32 && y > 0 && y < (self.height - 1) as i32
     }
 
-    pub fn get_neighbors<'a>(&'a self, pos: &Position, step: i32) -> impl Iterator<Item = Position> + 'a {
-        let (px, py) = (pos.x, pos.y);
-        let direction = [(0, step), (step, 0), (0, -step), (-step, 0)];
+    pub fn get_neighbors<'a>(&'a self, pos: &IVec2, step: i32) -> impl Iterator<Item = IVec2> + 'a {
+        let p = *pos;
+        let direction = [
+            IVec2::new(0, step),
+            IVec2::new(step, 0),
+            IVec2::new(0, -step),
+            IVec2::new(-step, 0),
+        ];
         direction.into_iter()
-            .map(move |(dx, dy)| Position::new(px + dx, py + dy))
+            .map(move |dir| p + dir)
             .filter(move |p| self.is_inside(p.x, p.y))
     }
 }

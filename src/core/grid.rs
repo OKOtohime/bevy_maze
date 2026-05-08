@@ -1,21 +1,5 @@
 use bevy::prelude::*;
 
-// Coordinate of node in world
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Ord, PartialOrd)]
-pub struct Position {
-    pub x: i32,
-    pub y: i32,
-}
-
-impl Position {
-    pub fn new(x: i32, y: i32) -> Self {
-        Self { x, y }
-    }
-    pub fn manhattan_distance(&self, other: &Position) -> i32 {
-        (self.x - other.x).abs() + (self.y - other.y).abs()
-    }
-}
-
 #[derive(Resource, Clone, Debug)]
 pub struct Grid2D<T> {
     pub width: usize,
@@ -28,15 +12,15 @@ impl<T> Grid2D<T> {
         (y as usize) * self.width + (x as usize)
     }
 
-    pub fn at_pos(&self, pos: &Position) -> usize {
+    pub fn at_pos(&self, pos: &IVec2) -> usize {
         self.at(pos.x, pos.y)
     }
 
     pub fn get(&self, x: i32, y: i32) -> &T {
         &self.data[self.at(x, y)]
     }
-    
-    pub fn get_at_pos(&self, pos: &Position) -> &T { &self.data[self.at(pos.x, pos.y)] }
+
+    pub fn get_at_pos(&self, pos: &IVec2) -> &T { &self.data[self.at(pos.x, pos.y)] }
 
     pub fn get_mut(&mut self, x: i32, y: i32) -> &mut T {
         let idx = self.at(x, y);
@@ -47,8 +31,8 @@ impl<T> Grid2D<T> {
         let idx = self.at(x, y);
         self.data[idx] = value;
     }
-    
-    pub fn set_at_pos(&mut self, pos: &Position, value: T) { self.set(pos.x, pos.y, value); }
+
+    pub fn set_at_pos(&mut self, pos: &IVec2, value: T) { self.set(pos.x, pos.y, value); }
 }
 
 impl<T: Clone> Grid2D<T> {

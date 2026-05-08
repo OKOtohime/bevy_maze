@@ -1,7 +1,7 @@
+use super::prelude::*;
+use crate::core::prelude::*;
 use bevy::prelude::*;
 use std::collections::BinaryHeap;
-use crate::core::prelude::*;
-use super::prelude::*;
 
 pub type AStarState = BestFirstState<AStarAlgo>;
 
@@ -14,9 +14,9 @@ pub fn setup_astar(mut state: ResMut<AStarState>, map: Res<Map>) {
         state.g_score.fill(i32::MAX);
     }
 
-    let start_pos = Position::new(1, 1);
-    let end_pos = Position::new((map.width - 2) as i32, (map.height - 2) as i32);
-    let initial_heuristic = start_pos.manhattan_distance(&end_pos);
+    let start_pos = IVec2::new(1, 1);
+    let end_pos = IVec2::new((map.width - 2) as i32, (map.height - 2) as i32);
+    let initial_heuristic = (start_pos - end_pos).abs().element_sum();
 
     state.priority_queue.push(HeapNode { position: start_pos, priority: initial_heuristic });
     state.g_score[map.at_pos(&start_pos)] = 0;
@@ -32,10 +32,10 @@ pub fn step_astar(
     mut tracker: ResMut<PathTracker>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
-    let end_pos = Position::new((map.width - 2) as i32, (map.height - 2) as i32);
+    let end_pos = IVec2::new((map.width - 2) as i32, (map.height - 2) as i32);
     step_best_first_logic(
         &mut commands, &map, &map_view, &mut tracker, &mut next_state,
         &mut state,
-        |pos| pos.manhattan_distance(&end_pos),
+        |pos| (pos - end_pos).abs().element_sum(),
     );
 }

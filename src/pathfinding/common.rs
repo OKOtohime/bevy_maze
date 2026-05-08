@@ -1,12 +1,12 @@
+use crate::core::prelude::*;
+use bevy::prelude::*;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::marker::PhantomData;
-use bevy::prelude::*;
-use crate::core::prelude::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct HeapNode {
-    pub position: Position,
+    pub position: IVec2,
     pub priority: i32
 }
 
@@ -25,8 +25,8 @@ impl PartialOrd for HeapNode {
 // Once the shortest path is found, we would use track to highlight the path
 #[derive(Resource, Default)]
 pub struct PathTracker {
-    pub came_from: Vec<Option<Position>>,
-    pub backtrack: Option<Position>,
+    pub came_from: Vec<Option<IVec2>>,
+    pub backtrack: Option<IVec2>,
 }
 
 // Shared logic for dijkstra and astar
@@ -57,9 +57,9 @@ pub fn step_best_first_logic<T: Send + Sync + 'static>(
     tracker: &mut PathTracker,
     next_state: &mut NextState<AppState>,
     state: &mut BestFirstState<T>,
-    heuristic: impl Fn(Position) -> i32,
+    heuristic: impl Fn(IVec2) -> i32,
 ) {
-    let end_pos = Position::new((map.width - 2) as i32, (map.height - 2) as i32);
+    let end_pos = IVec2::new((map.width - 2) as i32, (map.height - 2) as i32);
     let mut valid_node = None;
 
     while let Some(node) = state.priority_queue.pop() {
@@ -133,7 +133,7 @@ pub fn clear_previous_path(
         tracker.came_from.fill(None);
     }
     tracker.backtrack = None;
-    let start_pos = Position { x: 1, y: 1 };
+    let start_pos = IVec2 { x: 1, y: 1 };
     tracker.came_from[map.at_pos(&start_pos)] = Some(start_pos);
 }
 
@@ -146,7 +146,7 @@ pub fn draw_shortest_path(
 ) {
     if let Some(current_backtrack) = tracker.backtrack {
         if let Some(parent) = tracker.came_from[map.at_pos(&current_backtrack)] {
-            if parent == (Position { x: 1, y: 1 }) {
+            if parent == (IVec2 { x: 1, y: 1 }) {
                 tracker.backtrack = None;
                 next_app_state.set(AppState::Idle);
                 return;

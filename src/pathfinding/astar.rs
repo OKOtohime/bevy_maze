@@ -1,6 +1,14 @@
-use super::prelude::*;
+use super::common::*;
 use crate::core::prelude::*;
 use bevy::prelude::*;
+
+pub struct AStarPlugin;
+
+impl Plugin for AStarPlugin{
+    fn build(&self, app: &mut App){
+        app.register_sol_algo::<AStarState, _, _>("A*", setup_astar);
+    }
+}
 
 pub type AStarState = BestFirstState<AStarAlgo>;
 

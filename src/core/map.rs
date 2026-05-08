@@ -1,5 +1,5 @@
+use super::prelude::Grid2D;
 use bevy::prelude::*;
-use super::prelude::{Grid2D};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TileType {

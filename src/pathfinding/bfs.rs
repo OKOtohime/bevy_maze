@@ -1,7 +1,15 @@
-use super::prelude::*;
+use super::common::*;
 use crate::core::prelude::*;
 use bevy::prelude::*;
 use std::collections::VecDeque;
+
+pub struct BFSPlugin;
+
+impl Plugin for BFSPlugin{
+    fn build(&self, app: &mut App){
+        app.register_sol_algo::<BFSState, _, _>("BFS", setup_bfs);
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct BFSState {

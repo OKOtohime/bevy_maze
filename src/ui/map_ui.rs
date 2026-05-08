@@ -1,8 +1,8 @@
-use bevy::prelude::*;
+use super::common::*;
+use super::{DESKTOP_HEIGHT, DESKTOP_WIDTH};
 use crate::core::prelude::*;
 use crate::generation::common::update_map_at_pos;
-use super::common::*;
-use super::{DESKTOP_WIDTH, DESKTOP_HEIGHT};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct TileEntity;

@@ -1,6 +1,14 @@
-use super::prelude::*;
+use super::common::*;
 use crate::core::prelude::*;
 use bevy::prelude::*;
+
+pub struct DijkstraPlugin;
+
+impl Plugin for DijkstraPlugin{
+    fn build(&self, app: &mut App){
+        app.register_sol_algo::<DijkstraState, _, _>("Dijkstra", setup_dijkstra);
+    }
+}
 
 pub type DijkstraState = BestFirstState<DijkstraAlgo>;
 

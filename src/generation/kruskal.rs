@@ -1,7 +1,15 @@
-use bevy::prelude::*;
-use crate::core::prelude::*;
 use super::prelude::*;
+use crate::core::prelude::*;
+use bevy::prelude::*;
 use rand::prelude::SliceRandom;
+
+pub struct KruskalPlugin;
+
+impl Plugin for KruskalPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_gen_algo::<KruskalGenState, _, _>("Kruskal", setup_kruskal);
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct KruskalGenState {

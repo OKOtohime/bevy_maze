@@ -1,7 +1,15 @@
-use super::prelude::*;
+use super::common::*;
 use crate::core::prelude::*;
 use bevy::prelude::*;
 use std::collections::VecDeque;
+
+pub struct BiBFSPlugin;
+
+impl Plugin for BiBFSPlugin{
+    fn build(&self, app: &mut App){
+        app.register_sol_algo::<BiBFSState, _, _>("BiBFS", setup_bibfs);
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct BiBFSState {

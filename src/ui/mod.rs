@@ -2,11 +2,11 @@ pub mod config_ui;
 pub mod map_ui;
 mod common;
 
+use crate::ui::common::{MapResize, MapSyncEndpoints};
 use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
-use map_ui::*;
 use config_ui::*;
-use crate::ui::common::{MapResize, MapSyncEndpoints};
+use map_ui::*;
 
 pub const DESKTOP_WIDTH: u32 = 1280;
 pub const DESKTOP_HEIGHT: u32 = 1024;

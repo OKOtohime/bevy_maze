@@ -3,19 +3,18 @@ pub mod state;
 pub mod grid;
 pub mod map;
 pub mod prelude;
+mod registry;
 
-use bevy::prelude::*;
 use crate::core::prelude::*;
+use bevy::prelude::*;
 
 pub struct CorePlugin;
 
 impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
-            .init_state::<GenAlgorithm>()
-            .init_state::<SolAlgorithm>()
-            .add_computed_state::<ActiveGenState>()
-            .add_computed_state::<ActiveSolState>()
+            .init_resource::<AlgorithmRegistry>()
+            .init_resource::<SelectedAlgorithms>()
             .init_resource::<Config>()
             .add_message::<GenerationFinished>()
             .add_message::<PathfindingFinished>()

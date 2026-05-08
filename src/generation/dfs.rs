@@ -1,7 +1,15 @@
+use super::prelude::*;
+use crate::core::prelude::*;
 use bevy::prelude::*;
 use rand::prelude::IndexedRandom;
-use crate::core::prelude::*;
-use super::prelude::*;
+
+pub struct DFSPlugin;
+
+impl Plugin for DFSPlugin{
+    fn build(&self, app: &mut App){
+        app.register_gen_algo::<DFSGenState, _, _>("DFS", setup_dfs);
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct DFSGenState {

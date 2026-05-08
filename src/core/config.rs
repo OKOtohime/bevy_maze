@@ -1,5 +1,5 @@
-use std::time::Duration;
 use bevy::prelude::*;
+use std::time::Duration;
 
 // To visualize the algorithm process, we have to run the algorithm step by step
 #[derive(Resource)]

@@ -1,23 +1,19 @@
-use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
 use crate::core::prelude::*;
 use crate::ui::common::{MapResize, MapSyncEndpoints};
+use bevy::prelude::*;
+use bevy_egui::{egui, EguiContexts};
 
 pub fn config_panel_system(
     mut contexts: EguiContexts,
     mut config: ResMut<Config>,
     mut next_app_state: ResMut<NextState<AppState>>,
     app_state: Res<State<AppState>>,
-    gen_state: Res<State<GenAlgorithm>>,
-    mut next_gen_state: ResMut<NextState<GenAlgorithm>>,
-    sol_state: Res<State<SolAlgorithm>>,
-    mut next_sol_state: ResMut<NextState<SolAlgorithm>>,
+    registry: Res<AlgorithmRegistry>,
+    mut selection: ResMut<SelectedAlgorithms>,
     mut ev_resize: MessageWriter<MapResize>,
     mut ev_sync_pos: MessageWriter<MapSyncEndpoints>,
 ) {
     let is_idle = *app_state.get() == AppState::Idle;
-    let mut current_gen = *gen_state.get();
-    let mut current_sol = *sol_state.get();
 
     let mut size_changed = false;
     let mut pos_changed = false;
@@ -84,19 +80,22 @@ pub fn config_panel_system(
             ui.heading("Algorithms");
 
             ui.label("Generator:");
-            ui.horizontal(|ui| {
-                ui.radio_value(&mut current_gen, GenAlgorithm::DFS, "DFS");
-                ui.radio_value(&mut current_gen, GenAlgorithm::Prim, "Prim");
-                ui.radio_value(&mut current_gen, GenAlgorithm::Kruskal, "Kruskal");
+            ui.add_enabled_ui(is_idle, |ui| {
+                ui.horizontal(|ui| {
+                    for &algo_name in &registry.generators{
+                        ui.radio_value(&mut selection.gen_algorithm, algo_name, algo_name);
+                    }
+                });
             });
 
             ui.add_space(5.0);
             ui.label("Solver:");
-            ui.horizontal(|ui| {
-                ui.radio_value(&mut current_sol, SolAlgorithm::BFS, "BFS");
-                ui.radio_value(&mut current_sol, SolAlgorithm::Dijkstra, "Dijkstra");
-                ui.radio_value(&mut current_sol, SolAlgorithm::AStar, "A*");
-                ui.radio_value(&mut current_sol, SolAlgorithm::BiBFS, "BiBFS");
+            ui.add_enabled_ui(is_idle, |ui| {
+                ui.horizontal(|ui| {
+                    for &algo_name in &registry.solvers {
+                        ui.radio_value(&mut selection.sol_algorithm, algo_name, algo_name);
+                    }
+                });
             });
 
             ui.add_space(20.0);
@@ -117,9 +116,6 @@ pub fn config_panel_system(
                 ui.label("Powered by Bevy & Egui");
             });
         });
-
-    if current_gen != *gen_state.get() { next_gen_state.set(current_gen); }
-    if current_sol != *sol_state.get() { next_sol_state.set(current_sol); }
 
     let real_max_x = ((config.maze_width << 1) - 1) as i32;
     let real_max_y = ((config.maze_height << 1) - 1) as i32;

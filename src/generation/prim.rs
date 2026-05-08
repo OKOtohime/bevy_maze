@@ -1,6 +1,14 @@
-use bevy::prelude::*;
-use crate::core::prelude::*;
 use super::prelude::*;
+use crate::core::prelude::*;
+use bevy::prelude::*;
+
+pub struct PrimPlugin;
+
+impl Plugin for PrimPlugin{
+    fn build(&self, app: &mut App){
+        app.register_gen_algo::<PrimGenState, _, _>("Prim", setup_prim);
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct PrimGenState {

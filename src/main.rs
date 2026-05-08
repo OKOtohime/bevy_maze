@@ -3,13 +3,13 @@ mod generation;
 mod pathfinding;
 mod ui;
 
-use bevy::app::PluginGroupBuilder;
-use bevy::prelude::*;
-use bevy::window::WindowMode;
 use crate::core::CorePlugin;
 use crate::generation::MazeGenPlugin;
 use crate::pathfinding::MazeSolPlugin;
 use crate::ui::{UIPlugin, DESKTOP_HEIGHT, DESKTOP_WIDTH};
+use bevy::app::PluginGroupBuilder;
+use bevy::prelude::*;
+use bevy::window::WindowMode;
 
 pub struct MazePlugin;
 

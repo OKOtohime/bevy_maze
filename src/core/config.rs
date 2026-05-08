@@ -6,13 +6,21 @@ use bevy::prelude::*;
 pub struct Config {
     pub step_timer: Timer,
     pub mud_chance: f64,
+    pub maze_width: usize,
+    pub maze_height: usize,
+    pub start_pos: IVec2,
+    pub end_pos: IVec2,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             step_timer: Timer::new(Duration::from_millis(10), TimerMode::Repeating),
-            mud_chance: 0.05,
+            mud_chance: 0.0,
+            maze_width: 20,
+            maze_height: 20,
+            start_pos: IVec2::new(1, 1),
+            end_pos: IVec2::new(40, 40),
         }
     }
 }

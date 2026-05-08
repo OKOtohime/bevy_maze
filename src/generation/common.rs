@@ -32,8 +32,8 @@ pub fn reset_map(
 }
 
 pub fn finish_generation(
-    mut commands: &mut Commands,
-    mut map: &mut Map,
+    commands: &mut Commands,
+    map: &mut Map,
     map_view: &MapView,
     next_app_state: &mut NextState<AppState>,
     config: &Config,
@@ -49,15 +49,14 @@ pub fn finish_generation(
                 let is_near_end = x > (map.width - 4) as i32 && y > (map.height - 4) as i32;
                 if !is_near_start && !is_near_end && rng.random_bool(mud_chance) {
                     let weight = rng.random_range(2..=10);
-                    update_map_at_pos(&mut commands, &mut map, &map_view, IVec2{x, y}, TileType::Passable(weight));
+                    update_map_at_pos(commands, map, &map_view, IVec2{x, y}, TileType::Passable(weight));
                 }
             }
         }
     }
 
     // Setup start and end
-    update_map_at_pos(&mut commands, &mut map, &map_view, IVec2{x: 1, y: 1}, TileType::Start);
-    let end_y = (map.height - 2) as i32; let end_x = (map.width - 2) as i32;
-    update_map_at_pos(&mut commands, &mut map, &map_view, IVec2{x: end_x, y: end_y}, TileType::End);
+    update_map_at_pos(commands, map, &map_view, config.start_pos, TileType::Start);
+    update_map_at_pos(commands, map, &map_view, config.end_pos, TileType::End);
     next_app_state.set(AppState::Idle);
 }
